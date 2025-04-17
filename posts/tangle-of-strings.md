@@ -39,7 +39,7 @@ True
 
 </div>
 
-Could Python and JavaScript come up with different answers to this basic string question?!?
+How could Python and JavaScript come up with different answers to this basic string question?!?
 
 <!-- more -->
 
@@ -59,16 +59,16 @@ Second, how can we thread those needles to provide consistent semantics.
 
 ## A refresher on string encoding
 
-This is not a Unicode primer.  If you're unfamiliar with terms like *code points* and *string encoding*s, there's great sources of information.
+This is not a Unicode primer.  If you're unfamiliar with terms like *codepoints* and *string encoding*s, there're better sources of information.
 
 - "[The Absolute Minimum Every Software Developer Absolutely, Positively Must Know About Unicode and Character Sets \(No Excuses!\)](https://www.joelonsoftware.com/2003/10/08/the-absolute-minimum-every-software-developer-absolutely-positively-must-know-about-unicode-and-character-sets-no-excuses/)" introduces Unicode and character sets.
 - "[Fifty years of strings: Language design and the string datatype](https://ztoz.blog/posts/strings-history/)" details the co-evolution of string types and character encoding.
-- [Unicode.org's Tutorial Page](https://www.unicode.org/standard/tutorial-info.html) has officially endorsed training presentations and gets into some of the linguistics behin.
+- [Unicode.org's Tutorial Page](https://www.unicode.org/standard/tutorial-info.html) has officially endorsed training presentations and gets into some of the linguistics & anthropology behind why Unicode is the way it is.
 
-Those code samples above construct strings from integer code point values.
+Those code samples above construct strings from integer codepoint values.
 The JavaScript `String.fromCodePoint(0x0FFFF)` constructs a string with a single codepoint, *U+FFFF*.  And the Python `chr(0x16F00)` constructs a string with one codepoint, *U+16F00*.
 
-An encoding is a way of converting codepoints (technically code units) into bytes that can be laid out in memory.  The way bytes are actually laid out by running programs is complicated (e.g. [SSO](https://tc-imba.github.io/posts/cpp-sso/), [content-aware optimizations](https://medium.com/@brijesh.sriv.misc/optimizing-string-memory-usage-in-java-11-4c34f4a1a08a#what-are-compact-strings)), but the table below shows how that second string in detail, \[U+16F00\], can be laid out by three languages that are emblematic of the three most widely used encodings.  U+16F00 is a [supplementary code point](https://www.unicode.org/glossary/#supplementary_code_point), so it showcases a lot of corner cases.
+An encoding is a way of converting codepoints (technically code units) into bytes that can be laid out in memory.  The way bytes are actually laid out by running programs is complicated (e.g. [SSO](https://tc-imba.github.io/posts/cpp-sso/), [content-aware optimizations](https://medium.com/@brijesh.sriv.misc/optimizing-string-memory-usage-in-java-11-4c34f4a1a08a#what-are-compact-strings)), but the table below shows how that second string in detail, \[U+16F00\], can be laid out by three languages that are emblematic of the three most widely used encodings.  U+16F00 is a [supplementary codepoint](https://www.unicode.org/glossary/#supplementary_code_point), so it showcases a lot of corner cases.
 
 <span id="table-utfs" name="table-utfs"></span>
 
@@ -88,7 +88,7 @@ semantics.
 
 ## A cast of characters
 
-Lots of string corner cases deal with supplementary code points.
+Lots of string corner cases deal with supplementary codepoints.
 Let's introduce some characters that will reoccur in code examples below.
 
 Miao is a human language in the Hmong language family mostly spoken in
@@ -99,16 +99,16 @@ Many of its characters appear superficially similar to the Latin
 characters used by English writers because it was inspired by Cree.
 
 - '&#x16F00;' (U+16F00) Miao Letter Pa
-- '&#x16F01;' (U+16F01) Miao Letter Ba
+- '&#x16F20;' (U+16F20) Miao Letter Yi Ka
 
 In addition to those characters, expect to see:
 
 - 'L' (U+4C) ASCII Letter L
 - '&#x393;' (U+393) Greek Capital Letter Gamma
 
-So when you see one of those backwards 'L', think Miao supplementary code points, and when you see the Gamma which looks like an upside-down English 'L', think basic code plane but not ASCII.
+So when you see a character like a backwards 'L', think Miao supplementary codepoints, and when you see the Gamma which looks like an upside-down 'L', think basic code plane but not ASCII.
 
-And here are those characters in the three major encodings.
+And here are those characters in the three major Unicode encoding schemes.
 
 <span id="cast-of-chars-encoded"></span>
 
@@ -116,12 +116,12 @@ And here are those characters in the three major encodings.
 <tr><th>'L' U+4C</th><td><tt></tt></td><td><tt></tt></td><td><tt></tt></td><td><tt>4C</tt></td><td><tt></tt></td><td><tt>00 4C</tt></td><td><tt>00 00 00 4C</tt></td></tr>
 <tr><th>'&#x393;' U+393</th><td><tt></tt></td><td><tt></tt></td><td><tt>CE</tt></td><td><tt>93</tt></td><td><tt></tt></td><td><tt>03 93</tt></td><td><tt>00 00 03 93</tt></td></tr>
 <tr><th>'&#x16F00;' U+16F00</th><td><tt>F0</tt></td><td><tt>96</tt></td><td><tt>BC</tt></td><td><tt>80</tt></td><td><tt>D8 1B</tt></td><td><tt>DF 00</tt></td><td><tt>00 01 6F 00</tt></td></tr>
-<tr><th>'&#x16F01;' U+16F01</th><td><tt>F0</tt></td><td><tt>96</tt></td><td><tt>BC</tt></td><td><tt>81</tt></td><td><tt>D8 1B</tt></td><td><tt>DF 01</tt></td><td><tt>00 01 6F 01</tt></td></tr>
+<tr><th>'&#x16F20;' U+16F20</th><td><tt>F0</tt></td><td><tt>96</tt></td><td><tt>BC</tt></td><td><tt>a0</tt></td><td><tt>D8 1B</tt></td><td><tt>DF 20</tt></td><td><tt>00 01 6F 20</tt></td></tr>
 </table>
 
 ## Where strings unravel
 
-Let's look at a bunch of languages.
+Let's look at how strings are represented, as values in memory, and presented to developers writing code in various programming languages.
 
 We're going to look informally at a number of aspects and invariants, discussing each one in the context of a handful of tables.  Then we'll summarize in a table for far more languages.
 
@@ -134,7 +134,7 @@ We're going to look informally at a number of aspects and invariants, discussing
 - *Concatenation*: How does the language combine parts of strings into wholes?  Do different code unit representations (especially UTF-16 surrogates) persist after concatenation?  Is the length of a concatenation the sum of the lengths of the parts?
   There is quite a lot of variety here.
 
-(We, the Temper contributors, love all programming languages equally but we've biased towards widely used programming languages with good command line interaction for the informal discussion so that more people can follow along.)
+(We, the Temper contributors, love all programming languages equally but we've biased towards widely used programming languages with good command line interaction for the informal discussion so that readers can follow along.)
 
 ### Ordering
 
@@ -243,7 +243,7 @@ The only thing programming language designers actually agree on is powers of two
 
 Indexing is about getting a particular character out of a string: *myString\[index\]*.  Iteration is about sequentially operating on characters in a string.
 
-The first loop in the Go program below uses indexing to do iteration.  There's a second loop there.  Go and Rust both have *for each* style loops that operate on UTF-8 encoded bytes to iterate code points.
+The first loop in the Go program below uses indexing to do iteration.  There's a second loop there.  Go and Rust both have *for each* style loops that operate on UTF-8 encoded bytes to iterate codepoints.
 
 <div class="grid" markdown">
 
@@ -251,7 +251,7 @@ The first loop in the Go program below uses indexing to do iteration.  There's a
 package main
 import "fmt"
 func main() {
-	s := "LΓ𖼀𖼁"
+	s := "LΓ𖼀𖼠"
 	fmt.Printf("Loop over all byte offsets\n")
 	for i := 0; i < len(s); i++ {
 		fmt.Printf("  got byte %x at byte position %d\n", s[i], i)
@@ -275,19 +275,19 @@ Loop over all byte offsets
   got byte f0 at byte position 7
   got byte 96 at byte position 8
   got byte bc at byte position 9
-  got byte 81 at byte position 10
+  got byte a0 at byte position 10
 Iterating over chars
   got char U+4c at byte position 0
   got char U+393 at byte position 1
   got char U+16f00 at byte position 3
-  got char U+16f01 at byte position 7
+  got char U+16f20 at byte position 7
 ```
 
 </div>
 
 What's an easy way to see how indexing relates to codepoints?
 
-Let's ask different languages if the first character of one string is in another. We'll use our two Miao strings: U+16F00 and U+16F01.
+Let's ask different languages if the first character of one string is in another. We'll use our two Miao strings: U+16F00 and U+16F20.
 
 <div class="grid" markdown>
 
@@ -296,7 +296,7 @@ $ python3
 Python 3.13.2 (main, Feb  …
 Type "help", "copyright", …
 >>> a = '𖼀'
->>> b = '𖼁'
+>>> b = '𖼠'
 >>> a[0] in a
 True
 >>> a[0] in b
@@ -309,7 +309,7 @@ Welcome to Node.js v23.11.0.
 Type ".help" for more information.
 > let a = '𖼀';
 undefined
-> let b = '𖼁';
+> let b = '𖼠';
 undefined
 > a.includes(a[0])
 true
@@ -358,14 +358,14 @@ Like Go and Rust, JavaScript and Python both have loops that produce codepoints 
 🐚$ node
 Welcome to Node.js v23.11.0.
 Type ".help" for more information.
-> s = 'LΓ𖼀𖼁'
-'LΓ𖼀𖼁'
+> s = 'LΓ𖼀𖼠'
+'LΓ𖼀𖼠'
 > for (let c of s) {
 ...  console.log(c.codePointAt(0).toString(16)) }
 4c
 393
 16f00
-16f01
+16f20
 undefined
 > for (let i = 0, n = s.length; i < n; ++i) {
 ...  console.log(s[i].codePointAt(0).toString(16)) }
@@ -374,7 +374,7 @@ undefined
 d81b
 df00
 d81b
-df01
+df20
 undefined
 ```
 
@@ -382,21 +382,21 @@ undefined
 🐚$ python3
 Python 3.13.2 (main, Feb  …
 Type "help", "copyright", …
->>> s = 'LΓ𖼀𖼁'
+>>> s = 'LΓ𖼀𖼠'
 >>> for c in s:
 ...     print('%x' % ord(c))
 ...
 4c
 393
 16f00
-16f01
+16f20
 >>> for i in range(0, len(s)):
 ...     print('%x' % ord(s[i]))
 ...
 4c
 393
 16f00
-16f01
+16f20
 ```
 
 </div>
@@ -419,7 +419,7 @@ Naively, it seems like the length of the concatenation of two strings should be 
 That's often not true when you're counting codepoints.
 
 In JavaScript, concatenating surrogates (UTF-16 code units used to
-make a supplementary code point) merges them into one codepoint.
+make a supplementary codepoint) merges them into one codepoint.
 
 But the concatenation identity holds when you're counting UTF-16.
 
@@ -435,7 +435,7 @@ undefined
 '\udf00'
 > a + b // Surrogate pair
 '𖼀'
-> // ... splits code points
+> // ... splits codepoints
 undefined
 > [...(a + b + a + b)]
 [ '𖼀', '𖼀' ]
@@ -490,7 +490,7 @@ In Python3, there are two distinct strings:
 Most languages do not have that distinction.
 
 1. UTF-16 centric languages like Java, JavaScript, and C# do not because they do not track whether a surrogate was part of a pair or not.
-2. Rust because its strings are not code points for [security reasons](https://capec.mitre.org/data/definitions/80.html).  They are minimal UTF-8 encoded [Unicode scalar value]s by construction.
+2. Rust because its strings are not codepoints for [security reasons](https://capec.mitre.org/data/definitions/80.html).  They are minimal UTF-8 encoded [Unicode scalar value]s by construction.
 
 Python3 succeeds with the concatenation invariant above, but at the cost of allowing constructing strings that are not constructible in most other languages which raises its own interop concerns.
 
@@ -547,7 +547,7 @@ We used a few languages above to explore some of the variety in how languages re
 <td markdown>L-CP[^14]</td>
 <td markdown>Octet</td>
 <td markdown>Octet</td>
-<td markdown>Code points[^15]</td>
+<td markdown>codepoints[^15]</td>
 <td markdown>Distinct</td>
 </tr>
 
@@ -567,7 +567,7 @@ We used a few languages above to explore some of the variety in how languages re
 <td markdown>L-U16[^10]</td>
 <td markdown>UTF-16</td>
 <td markdown>UTF-16</td>
-<td markdown>Code points[^11]</td>
+<td markdown>codepoints[^11]</td>
 <td markdown>Merged</td>
 </tr>
 
@@ -633,7 +633,7 @@ Here's what each of those columns means and the associated values.
     * *Various*: a representation is chosen based on the semantic content usually for space efficiency reasons.  See the notes.
     * *bytes × encoding*: there's some content and extra metadata explains, at runtime, how to interpret that content.
 - Order: how does the language's idiomatic way to compare string values order strings.
-    * *L-CP*: Lexical by code point.  U+0FFFF < U+10000
+    * *L-CP*: Lexical by codepoint.  U+0FFFF < U+10000
     * *L-U16*: Lexical by UTF-code unit.  U+0FFFF > U+10000
     * *L\**: Lexical by something.  Encoding metadata might be used to pick a comparison method.
     * *UTR-10*: Comparison depends on a human-language locale as explained in [Unicode technical report #10](https://www.unicode.org/reports/tr10/)
@@ -652,11 +652,11 @@ Here's what each of those columns means and the associated values.
     * *UTF-16*: a number representing a UTF-16 code unit
     * *CP*: a codepoint
     * *Grapheme*: a grapheme cluster
-    * *Explicit*: the user chooses what to iterate over.  Strings are not iterable, but they expose methods that return a byte iterator or a code point iterator.
+    * *Explicit*: the user chooses what to iterate over.  Strings are not iterable, but they expose methods that return a byte iterator or a codepoint iterator.
 - Surrogate handling: what happens when concatenating or joining strings when newly-adjacent chunks span a surrogate pair?
     * *Merged*: `"\uD800" + "\uDC00"` is indistinguishable from the single codepoint string U+10000.
     * *Distinct*: that concatenation is possible and produces a string with those two codepoints, not the single codepoint U+10000.
-    * *Disallowed*: that concatenation is not possible without using unsafe or explicitly unchecked APIs, so code shouldn't, for example, encounter adjacent surrogates when iterating over code-points by decoding UTF-8.
+    * *Disallowed*: that concatenation is not possible without using unsafe or explicitly unchecked APIs, so code shouldn't, for example, encounter adjacent surrogates when iterating over codepoints by decoding UTF-8.
 
 [^3]: [CPP Reference String classes](https://en.cppreference.com/w/cpp/string#String_classes_.28std::string_etc..29)
 [^4]: [C# Language References &sect; Builtin types, Char](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/char)
@@ -677,7 +677,7 @@ Here's what each of those columns means and the associated values.
 [^19]: [PEP 393](https://peps.python.org/pep-0393/): "The Unicode string type is changed to support multiple internal representations, depending on the character with the largest Unicode ordinal (1, 2, or 4 bytes). This will allow a space-efficient representation in common cases, but give access to full UCS-4 on all systems."
 [^20]: [Ruby Core-3.0.1 String &sect; new class method](https://ruby-doc.org/core-3.0.1/String.html#new-method): "new(string = '', encoding: encoding) → new_string"
 [^21]: [class Encoding](https://docs.ruby-lang.org/en/2.1.0/Encoding.html#method-c-default_internal): the default inernal encoding can be changed at runtime
-[^22]: [Ruby Core-3.0.1 String &sect; \<=\>](https://ruby-doc.org/core-3.0.1/String.html#method-i-3C-3D-3E): strings with different internal encodings are incomparable
+[^22]: [Ruby Core-3.0.1 String &sect; &lt;=&gt;](https://ruby-doc.org/core-3.0.1/String.html#method-i-3C-3D-3E): strings with different internal encodings are incomparable
 [^23]: [Ruby Core-3.0.1 String &sect; length](https://ruby-doc.org/core-3.0.1/String.html#length-method): "count of characters (not bytes)"
 [^24]: [Ruby Core-3.0.1 String &sect; \[\]](https://ruby-doc.org/core-3.0.1/String.html#5B-5D-method)
 [^25]: Separate enumerators. See [Ruby Core-3.0.1 String &sect; each_byte, each_char, each_codepoint, each_grapheme_cluster](https://ruby-doc.org/core-3.0.1/String.html#each_byte-method)
@@ -743,7 +743,7 @@ First, we need to **avoid unnecessary copies**.  Parsing often proceeds by extra
 
 Second, we need to **support left-to-right and right-to-left processing**.  Parsing often proceeds left-to-right, but a lot of code needs to do suffix checks to: "is this file path a `.png` file?" for example.
 
-Third, allow for **efficient available character checks**.  As seen above, counting code points might be O(n), but often parsing algorithms don't need the count.  Parsing algorithms can often make do with *constant lookahead*: for example, to know whether the next token is C# keyword `false` or a longer identifier like `falsey`, I need one character of lookahead after the 'e'.  For a constant *k*, determining whether there are *k* characters remaining can often be done in constant time for long strings, which is where the difference with exhaustive counting really matters. In UTF-8, if the remaining array length is *k &times; 4* or greater, then there're at least *k* since each code-point can take at most 4 array elements.
+Third, allow for **efficient available character checks**.  As seen above, counting codepoints might be O(n), but often parsing algorithms don't need the count.  Parsing algorithms can often make do with *constant lookahead*: for example, to know whether the next token is C# keyword `false` or a longer identifier like `falsey`, I need one character of lookahead after the 'e'.  For a constant *k*, determining whether there are *k* characters remaining can often be done in constant time for long strings, which is where the difference with exhaustive counting really matters. In UTF-8, if the remaining array length is *k &times; 4* or greater, then there're at least *k* since each codepoint can take at most 4 array elements.
 
 Fourth, we should **avoid entangling strings with threads**.  Using random access to walk a string left to right can be efficient if you memoize information about the last access, but multiple threads could be operating on strings in parallel.  Introducing memory barriers or concurrent data structures is a source of complexity that backend writers would be better off not having to worry about.
 
@@ -1007,7 +1007,7 @@ target language type.  Here Temper's *Int*, *StringIndex* and *NoStringIndex*
 types all translate to Java *int*.  (A sealed type may have multiple sub-types that connect to the same target language type, but it must be able to answer [RTTI](https://en.wikipedia.org/wiki/Run-time_type_information) questions about them.)
 This also helps with translation in languages that conflate strings with other kinds of values.  For example, in Perl, PHP, and MUMPS, there's no hard distinction between numbers, booleans, and strings.  And in some older languages, it's idiomatic to represent dates as 8-digit strings.
 
-In Temper, we bias towards semantic choices that prevail in languages preferred for high-{performance,throughput} code, so our string comparison is lexical by code point.  So to answer the question posed at the top of this article:
+In Temper, we bias towards semantic choices that prevail in languages preferred for high-{performance,throughput} code, so our string comparison is lexical by codepoint.  So to answer the question posed at the top of this article:
 
 ```js
 🐚$ temper repl
