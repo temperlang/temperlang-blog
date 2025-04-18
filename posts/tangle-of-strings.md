@@ -68,7 +68,7 @@ This is not a Unicode primer.  If you're unfamiliar with terms like *code points
 Those code samples above construct strings from integer code point values.
 The JavaScript `String.fromCodePoint(0x0FFFF)` constructs a string with a single codepoint, *U+FFFF*.  And the Python `chr(0x16F00)` constructs a string with one codepoint, *U+16F00*.
 
-An encoding is a way of converting codepoints (technically code units) into bytes that can be laid out in memory.  The way bytes are actually laid out by running programs is complicated (e.g. [SSO](https://tc-imba.github.io/posts/cpp-sso/), [content-aware optimizations](https://medium.com/@brijesh.sriv.misc/optimizing-string-memory-usage-in-java-11-4c34f4a1a08a#what-are-compact-strings)), but the table below shows how that second string in detail, \[U+16F00\], can be laid out by three languages that are emblematic of the three most widely used encodings.  U+16F00 is a [supplementary code point](https://www.unicode.org/glossary/#supplementary_code_point), so it showcases a lot of corner cases.
+An encoding is a way of converting codepoints (technically code units) into bytes that can be laid out in memory.  The way bytes are actually laid out by running programs is complicated (e.g. [SSO](https://tc-imba.github.io/posts/cpp-sso/), [content-aware optimizations](https://medium.com/@brijesh.sriv.misc/optimizing-string-memory-usage-in-java-11-4c34f4a1a08a#what-are-compact-strings)), but the table below shows how that second string in detail, \[U+16F00\], can be laid out by three languages that are emblematic of the three most widely used encodings.  U+16F00 is a [supplementary code point](https://www.unicode.org/glossary/#supplementary_code_point) so it's representation varies wildly across encodings.
 
 <span id="table-utfs" name="table-utfs"></span>
 
@@ -77,14 +77,6 @@ An encoding is a way of converting codepoints (technically code units) into byte
 <tr><td>JavaScript</td><td>UTF-16 code unit</td><td colspan="2">D81B<sub>16</sub></td><td colspan="2">DF00<sub>16</sub></td><td>2</td></tr>
 <tr><td>Lua</td><td>Octets, probably UTF-8</td><td>F0<sub>16</sub></td><td>96<sub>16</sub></td><td>BC<sub>16</sub></td><td>80<sub>16</sub></td><td>4</td></tr>
 </table>
-
-Let's use these three languages primarily, and others, to explore how
-representational choices affect the precise semantics of programs
-written in them.
-
-Then later, let's look at ways to bridge the semantics allowing one
-language to translate to all of them with efficient, consistent
-semantics.
 
 ## A cast of characters
 
@@ -98,7 +90,7 @@ which appears in Unicode in supplementary code pages ([U+16Fxx](https://www.unic
 Many of its characters appear superficially similar to the Latin
 characters used by English writers because it was inspired by Cree.
 
-- '&#x16F00;' (U+16F00) Miao Letter Pa
+- '&#x16F00;' (U+16F00) Miao Letter Pa (seen above)
 - '&#x16F01;' (U+16F01) Miao Letter Ba
 
 In addition to those characters, expect to see:
@@ -106,9 +98,9 @@ In addition to those characters, expect to see:
 - 'L' (U+4C) ASCII Letter L
 - '&#x393;' (U+393) Greek Capital Letter Gamma
 
-So when you see one of those backwards 'L', think Miao supplementary code points, and when you see the Gamma which looks like an upside-down English 'L', think basic code plane but not ASCII.
+So when you see one of those backwards 'L's, think Miao supplementary code points, and when you see the Gamma which looks like an upside-down English 'L', think basic code plane but not ASCII.
 
-And here are those characters in the three major encodings.
+And here are those codepoints in the three major encodings.
 
 <span id="cast-of-chars-encoded"></span>
 
@@ -121,9 +113,9 @@ And here are those characters in the three major encodings.
 
 ## Where strings unravel
 
-Let's look at a bunch of languages.
+Let's look at string operations' semantics in various languages.
 
-We're going to look informally at a number of aspects and invariants, discussing each one in the context of a handful of tables.  Then we'll summarize in a table for far more languages.
+We're going to look informally at a number of aspects and invariants, discussing each one in the context of a handful of languages.  Then we'll summarize in a table for far more languages.
 
 - *Ordering*: what does the language's primary comparison operator (`<`) mean applied to strings?
   These turn out to group into UTF-16 order and codepoint order.
@@ -134,11 +126,11 @@ We're going to look informally at a number of aspects and invariants, discussing
 - *Concatenation*: How does the language combine parts of strings into wholes?  Do different code unit representations (especially UTF-16 surrogates) persist after concatenation?  Is the length of a concatenation the sum of the lengths of the parts?
   There is quite a lot of variety here.
 
-(We, the Temper contributors, love all programming languages equally but we've biased towards widely used programming languages with good command line interaction for the informal discussion so that more people can follow along.)
+(We, the Temper contributors, love all programming languages equally but we've biased towards widely used programming languages with good interactive command line tools so that the examples are easy to understand and reproduce.)
 
 ### Ordering
 
-Why did JavaScript and Python3 differ when comparing two strings above?  JavaScript's *String.fromCodePoint\(0xFFFF\)* and Python's *chr\(0xFFFF\)* should mean the same thing.
+Why did JavaScript and Python3 differ when comparing two strings in our first example above?  JavaScript's *String.fromCodePoint\(0xFFFF\)* and Python's *chr\(0xFFFF\)* should mean the same thing.
 
 Python's library specification[^1] defines string comparison:
 
@@ -154,7 +146,7 @@ The JavaScript specification[^2] says:
 
 [^2]: [Ecma262/2023 &sect;7.2.13](https://tc39.es/ecma262/2023/multipage/abstract-operations.html#sec-islessthan) *IsLessThan*
 
-Wait, JavaScript is *lexicographic* too! Even Java:
+Wait, JavaScript is not just *lexicographic* but simple too! Even Java is on the lexicographic bandwagon:
 
 > `public int compareTo(String anotherString)` Compares two strings lexicographically.
 
@@ -172,7 +164,8 @@ Why does JavaScript differ from Python3? JavaScript defines "character" as "UTF-
 
 #### Human language ordering is not lexicographic
 
-Fun fact, Lua's `<` does locale-sensitive comparison.
+Fun fact, language designers do not agree.
+Lua's `<` operator performs locale-sensitive comparison.
 Unicode defines *collation rules* which capture the dictionary sorting rules for human language.
 
 [UTR-10](https://www.unicode.org/reports/tr10/#Example_Differences_Table) has this example showing that a German reader would expect 'o'-umlaut next to 'o' in a sorted list but a Swedish reader would not.
@@ -199,7 +192,9 @@ de_DE
 false
 ```
 
-Languages used for server software usually expose these rules via libraries like Java's [*java.text.Collator*](https://docs.oracle.com/javase/8/docs/api/java/text/Collator.html) so that a program can explicitly deal with human-language text in strings using the right locale for the particular end user which may come from an HTTP header or a user preferences database, not the current process's locale environment variables. Lua is heavily used to script game actions; maybe in a game client, the current locale is a good indicator of the user's preference.
+Languages used for server software usually expose these rules via libraries like Java's [*java.text.Collator*](https://docs.oracle.com/javase/8/docs/api/java/text/Collator.html) so that a program can explicitly deal with human-language text in strings using the right locale for the particular end user which may come from an HTTP header or a user preferences database, not the current process's locale environment variables.
+
+Lua is heavily used to script game actions.  Maybe in a game client, the current locale is a good indicator of the user's preference so this design choice may assist game devs in presenting an inventory list in a way that respects players' preferences.
 
 ### Length
 
@@ -320,7 +315,7 @@ true
 </div>
 
 In that example, *a* and *b* are different, single codepoint strings.
-In Python3, *a* and *b* have a non-empty prefix in common, but in JavaScript, they don't.
+In JavaScript, *a* and *b* have a non-empty prefix in common, but in Python3, they don't.
 Again, the root cause is differing definitions of "character" used when indexing.
 
 And this difference bleeds through to lexically identical regular expressions.
