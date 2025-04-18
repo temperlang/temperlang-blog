@@ -68,13 +68,7 @@ This is not a Unicode primer.  If you're unfamiliar with terms like *codepoints*
 Those code samples above construct strings from integer codepoint values.
 The JavaScript `String.fromCodePoint(0x0FFFF)` constructs a string with a single codepoint, *U+FFFF*.  And the Python `chr(0x16F00)` constructs a string with one codepoint, *U+16F00*.
 
-<<<<<<< HEAD
 An encoding is a way of converting codepoints (technically code units) into bytes that can be laid out in memory.  The way bytes are actually laid out by running programs is complicated (e.g. [SSO](https://tc-imba.github.io/posts/cpp-sso/), [content-aware optimizations](https://medium.com/@brijesh.sriv.misc/optimizing-string-memory-usage-in-java-11-4c34f4a1a08a#what-are-compact-strings)), but the table below shows how that second string in detail, \[U+16F00\], can be laid out by three languages that are emblematic of the three most widely used encodings.  U+16F00 is a [supplementary code point](https://www.unicode.org/glossary/#supplementary_code_point) so it's representation varies wildly across encodings.
-||||||| 6d16e99
-An encoding is a way of converting codepoints (technically code units) into bytes that can be laid out in memory.  The way bytes are actually laid out by running programs is complicated (e.g. [SSO](https://tc-imba.github.io/posts/cpp-sso/), [content-aware optimizations](https://medium.com/@brijesh.sriv.misc/optimizing-string-memory-usage-in-java-11-4c34f4a1a08a#what-are-compact-strings)), but the table below shows how that second string in detail, \[U+16F00\], can be laid out by three languages that are emblematic of the three most widely used encodings.  U+16F00 is a [supplementary code point](https://www.unicode.org/glossary/#supplementary_code_point), so it showcases a lot of corner cases.
-=======
-An encoding is a way of converting codepoints (technically code units) into bytes that can be laid out in memory.  The way bytes are actually laid out by running programs is complicated (e.g. [SSO](https://tc-imba.github.io/posts/cpp-sso/), [content-aware optimizations](https://medium.com/@brijesh.sriv.misc/optimizing-string-memory-usage-in-java-11-4c34f4a1a08a#what-are-compact-strings)), but the table below shows how that second string in detail, \[U+16F00\], can be laid out by three languages that are emblematic of the three most widely used encodings.  U+16F00 is a [supplementary codepoint](https://www.unicode.org/glossary/#supplementary_code_point), so it showcases a lot of corner cases.
->>>>>>> d017ad8f7c363f5a5254ade3e7220dbf467f7aa9
 
 <span id="table-utfs" name="table-utfs"></span>
 
@@ -96,37 +90,17 @@ which appears in Unicode in supplementary code pages ([U+16Fxx](https://www.unic
 Many of its characters appear superficially similar to the Latin
 characters used by English writers because it was inspired by Cree.
 
-<<<<<<< HEAD
 - '&#x16F00;' (U+16F00) Miao Letter Pa (seen above)
-- '&#x16F01;' (U+16F01) Miao Letter Ba
-||||||| 6d16e99
-- '&#x16F00;' (U+16F00) Miao Letter Pa
-- '&#x16F01;' (U+16F01) Miao Letter Ba
-=======
-- '&#x16F00;' (U+16F00) Miao Letter Pa
 - '&#x16F20;' (U+16F20) Miao Letter Yi Ka
->>>>>>> d017ad8f7c363f5a5254ade3e7220dbf467f7aa9
 
 In addition to those characters, expect to see:
 
 - 'L' (U+4C) ASCII Letter L
 - '&#x393;' (U+393) Greek Capital Letter Gamma
 
-<<<<<<< HEAD
-So when you see one of those backwards 'L's, think Miao supplementary code points, and when you see the Gamma which looks like an upside-down English 'L', think basic code plane but not ASCII.
-||||||| 6d16e99
-So when you see one of those backwards 'L', think Miao supplementary code points, and when you see the Gamma which looks like an upside-down English 'L', think basic code plane but not ASCII.
-=======
 So when you see a character like a backwards 'L', think Miao supplementary codepoints, and when you see the Gamma which looks like an upside-down 'L', think basic code plane but not ASCII.
->>>>>>> d017ad8f7c363f5a5254ade3e7220dbf467f7aa9
 
-<<<<<<< HEAD
-And here are those codepoints in the three major encodings.
-||||||| 6d16e99
-And here are those characters in the three major encodings.
-=======
 And here are those characters in the three major Unicode encoding schemes.
->>>>>>> d017ad8f7c363f5a5254ade3e7220dbf467f7aa9
 
 <span id="cast-of-chars-encoded"></span>
 
@@ -139,13 +113,7 @@ And here are those characters in the three major Unicode encoding schemes.
 
 ## Where strings unravel
 
-<<<<<<< HEAD
-Let's look at string operations' semantics in various languages.
-||||||| 6d16e99
-Let's look at a bunch of languages.
-=======
 Let's look at how strings are represented, as values in memory, and presented to developers writing code in various programming languages.
->>>>>>> d017ad8f7c363f5a5254ade3e7220dbf467f7aa9
 
 We're going to look informally at a number of aspects and invariants, discussing each one in the context of a handful of languages.  Then we'll summarize in a table for far more languages.
 
@@ -158,13 +126,7 @@ We're going to look informally at a number of aspects and invariants, discussing
 - *Concatenation*: How does the language combine parts of strings into wholes?  Do different code unit representations (especially UTF-16 surrogates) persist after concatenation?  Is the length of a concatenation the sum of the lengths of the parts?
   There is quite a lot of variety here.
 
-<<<<<<< HEAD
 (We, the Temper contributors, love all programming languages equally but we've biased towards widely used programming languages with good interactive command line tools so that the examples are easy to understand and reproduce.)
-||||||| 6d16e99
-(We, the Temper contributors, love all programming languages equally but we've biased towards widely used programming languages with good command line interaction for the informal discussion so that more people can follow along.)
-=======
-(We, the Temper contributors, love all programming languages equally but we've biased towards widely used programming languages with good command line interaction for the informal discussion so that readers can follow along.)
->>>>>>> d017ad8f7c363f5a5254ade3e7220dbf467f7aa9
 
 ### Ordering
 
