@@ -70,7 +70,7 @@ important use cases?
 
 *Failure Is Not Not an Option* but Some Option is not a Failure?! This
 article discusses Nicomachean Ethics: Aristotle’s take on the virtues
-of exceptions catching vs result checking for error handling.
+of exceptions vs result checking for error handling.
 Exception handling is also super important to programmers. An
 interface isn’t idiomatic if programmers can’t rely on practices that
 have worked before to meet failure-handling responsibilities.
