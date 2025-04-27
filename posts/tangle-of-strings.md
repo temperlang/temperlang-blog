@@ -11,7 +11,7 @@ draft: true
 
 <small>(This is part of a [series of articles](./stretching.md) each of which highlights a difficulty in translating a familiar programming concept across programming languages and highlights design choices to bridge that gap)</small>
 
-I don't need to explain strings to you, dear reader.  **Strings** are a major tool in every programmer's toolbox.  Some say its the [only one you need](https://blog.codinghorror.com/new-programming-jargon/#7-stringly-typed).  Everyone knows how they work; there's no way programming languages could disagree on what basic string operations mean?
+I don't need to explain strings to you, dear reader.  **Strings** are a major tool in every programmer's toolbox.  Some say it's the [only one you need](https://blog.codinghorror.com/new-programming-jargon/#7-stringly-typed).  Everyone knows how they work; there's no way programming languages could disagree on what basic string operations mean?
 
 Right! Right?
 
@@ -165,8 +165,8 @@ Why does JavaScript differ from Python3? JavaScript defines "character" as "UTF-
 #### Human language ordering is not lexicographic
 
 Fun fact, language designers do not agree.
-Lua's `<` operator performs locale-sensitive comparison.
-Unicode defines *collation rules* which capture the dictionary sorting rules for human language.
+In Lua&ge;5, the `<` operator performs *locale-sensitive* comparison.
+Unicode defines *collation rules* which capture the dictionary sorting rules for human languages.
 
 [UTR-10](https://www.unicode.org/reports/tr10/#Example_Differences_Table) has this example showing that a German reader would expect 'o'-umlaut next to 'o' in a sorted list but a Swedish reader would not.
 
