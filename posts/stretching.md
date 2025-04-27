@@ -60,7 +60,7 @@ bottom-esque type let us translate well to languages that have them
 and those that don’t and avoid producing translations that trip up
 “Unreachable code” compiler checks.
 
-*Cast Away: TFW Your BFF may be a Volleyball* discusses type casting,
+*Cast Away: TFW Your BFF is a Volleyball* discusses type casting,
 checking whether a value is of a type before proceeding to treat it
 that way. As noted above, some languages answer “is this value an int,
 a float, a boolean, or a string” with a resounding “yes!” Other
@@ -90,7 +90,7 @@ operations like serialization. How can Temper support those operations
 without sinking into a semantic tarpit?
 
 *When We Go Low, We Go High* talks about an opportunity. Some dynamic
-languages pair well with a compied language: CPython with C, JS with
+languages pair well with a compiled language: CPython with C, JS with
 Wasm. When translating, can we get the best of both?: idiomatic
 dynamic language interfaces that delegate most of the work to
 ahead-of-time optimized code.
