@@ -50,7 +50,7 @@ tool would have to know of and test for many languages' quirks.  We'd
 fail in one of our design goals: in Temper, a little testing effort
 goes a long way.
 
-!!! note "Q"
+!!! note ""
 
     How can we craft a *String* API that is both **familiar to developers** and has a **consistent, useful semantics**?
 
