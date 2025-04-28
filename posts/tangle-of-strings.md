@@ -569,7 +569,7 @@ We used a few languages above to explore some of the variety in how languages re
 <tr markdown>
 <th markdown>Lua</th>
 <td markdown>UTF-8 Conv[^16]</td>
-<td markdown>UTR-10[^17]</td>
+<td markdown>UTR-10[^17a], L-U8[^17b]</td>
 <td markdown>Octet[^18]</td>
 <td markdown>Octet</td>
 <td markdown>Octet</td>
@@ -667,7 +667,8 @@ Here's what each of those columns means and the associated values.
 [^14]: [Go language specification &sect; Comparison operators](https://go.dev/ref/spec#Comparison_operators): "compared lexically byte-wise"
 [^15]: [Go language specification &sect; For statements with range clause](https://go.dev/ref/spec#RangeClause): "iterates over the Unicode code-points"
 [^16]: [Lua 5.4 Reference Manual &sect; 3.1 Lexical Conventions](https://www.lua.org/manual/5.4/manual.html#3.1): "The UTF-8 encoding of a Unicode character can be inserted in a literal string with the escape sequence `\u{XXX}`"
-[^17]: [Lua 5.4 Reference Manual &sect; 3.4.4 Relational Operators](https://www.lua.org/manual/5.4/manual.html#3.4.4): "compared according to the current Locale"
+[^17a]: [Lua 5.4 Reference Manual &sect; 3.4.4 Relational Operators](https://www.lua.org/manual/5.4/manual.html#3.4.4): "compared according to the current Locale"
+[^17b]: [Lua 4.0 Reference Manual &sect; 4.5.3 Relational Operators](https://www.lua.org/manual/4.0/manual.html#4.5.3): "compared using lexicographical order"
 [^18]: [Lua 5.4 Reference Manual &sect; 3.4.7 The Length Operator](https://www.lua.org/manual/5.4/manual.html#3.4.7): "number of bytes"
 [^19]: [PEP 393](https://peps.python.org/pep-0393/): "The Unicode string type is changed to support multiple internal representations, depending on the character with the largest Unicode ordinal (1, 2, or 4 bytes). This will allow a space-efficient representation in common cases, but give access to full UCS-4 on all systems."
 [^20]: [Ruby Core-3.0.1 String &sect; new class method](https://ruby-doc.org/core-3.0.1/String.html#new-method): "new(string = '', encoding: encoding) → new_string"

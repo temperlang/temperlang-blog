@@ -6,59 +6,63 @@ authors:
 
 # Stretching the strangeness budget to bridge language communities
 
-The tools we have at hand shape how we work with others, especially
-the languages we use to express ourselves. When I have a language in
-common with you, it’s easier for us to identify common problems, craft
-shared solutions, and the effort spent testing and improving benefits
-many; without, we each reinvent wonky wheels.
+What good is a programming language that translates to all the others?
+If its semantics don't translate faithfully, not a lot. If they do,
+developers can easily identify common problems and craft shared
+solutions even across language communities &mdash; the software
+community becomes less divided despite working on different
+stacks. Data scientists use Python, the web platform uses JavaScript,
+mobile app and backend people each use their own preferred languages
+(and legacy systems … ugh). But that doesn't need to fragment the
+software community.
 
-The software community is fragmented. Data scientists use Python, the
-web platform uses JavaScript, mobile apps and backends are written in
-yet another language, and legacy systems … ugh.
+*Temper* is a programming language designed for one thing: translating
+well to the others.  It fills this gap in our collective toolbox; it
+allows sharing common solutions across all the language communities in
+an engineering organisation, or across the whole open-source
+community. One developer or a small team can use Temper to write a
+library that translates into all the other languages, supporting many
+language communities.
 
-Temper is a language designed to translate well to all. It fills this
-gap in our collective toolbox to allows sharing common solutions
-across all the language communities in an engineering organisation, or
-across the whole open-source community. One developer or a small team
-can use Temper to write a library that translates into all the other
-languages, supporting many language communities.
-
-A blessing and a curse: different languages are often the right tool
-for different jobs, but each has its own quirks. This series of
-articles explores these differences. Each starts with a short snippet
-of code, and looks at the problems with a naïve translation into
-various languages. Translating faithfully and providing idiomatic
-interfaces is hard, so understanding these differences is crucial to
-bridging language communities.
+Different languages are often the right tool for different jobs, but
+each has its own quirks. This series of articles explores these
+differences. Each starts with a short snippet of code, and looks at
+the problems with a naïve translation into various languages.
+Translating faithfully and providing idiomatic interfaces
+is hard, so understanding these differences is crucial to bridging
+language communities so the languages we work in don't dictate whom
+we can collaborate with.
 
 <!-- more -->
 
 The first article, [*A Tangle of Strings*](./tangle-of-strings.md),
-starts small.  It has nothing to do with entertaining cats, but, maybe
-`cat`. Can we write simple string functions that translate efficiently
-while preserving semantics? Yes, Betteridge’s law notwithstanding, but
-to do so in a way that is efficient and sensible to the working
-programmer, we need to first disentangle semantic yarn.
+starts small.  Strings are great for entertaining cats (=~ `cat`), but
+turns out they're good for other things too! Can we write simple
+string functions that translate efficiently while preserving
+semantics? To do so in a way that is both efficient and sensible to the
+working programmer, we need to first disentangle some semantic yarn.
 
-*When Words Collide* deals with naming collisions? Languages have subtly
-(and grossly) different approaches to naming style, overloading,
-overriding, masking, key word reservation.
+*When Words Collide* deals with naming collisions? Languages have
+subtly (and grossly) different approaches to naming style,
+overloading, overriding, masking, key word reservation. What can one
+do when the perfect name for a function in one language is forbidden
+in another?
 
 *Generically Speaking* talks about generic operations. Some languages
 don’t distinguish between strings and integers at runtime (Perl, PHP),
 others between integers and floats (JavaScript, Lua and many
-others). How can we translate a simple generic minimum function that
-uses a lexicographic string comparison given strings and numeric
-comparison given ints? How can we do this without expanding code size
-(as monomorphization tends to) for languages like JavaScript where
-code has to be sent over the wire?
+others). How can we translate a simple generic *minimum* function so
+that it uses a lexicographic string comparison given strings and
+numeric comparison given ints? How can we do this without expanding
+code size (as monomorphization tends to) for languages like JavaScript
+where code has to be sent over the wire?
 
 *Well, I Never!, But When I Do* discusses bottom types. Some languages
 have a type that conveys “expressions of this type never produce a
-value” which might be called Never or Nothing. How does Temper’s
-bottom-esque type let us translate well to languages that have them
-and those that don’t and avoid producing translations that trip up
-“Unreachable code” compiler checks.
+value” which you might've seen called *Never* or *Nothing*. How does
+Temper’s bottom-esque type let us translate well to both languages that
+have them and those that don’t and avoid producing translations that
+trip up “Unreachable code” compiler checks.
 
 *Cast Away: TFW Your BFF is a Volleyball* discusses type casting,
 checking whether a value is of a type before proceeding to treat it
@@ -70,27 +74,29 @@ important use cases?
 
 *Failure Is Not Not an Option* but Some Option is not a Failure?! This
 article discusses Nicomachean Ethics: Aristotle’s take on the virtues
-of exceptions vs result checking for error handling.
-Exception handling is also super important to programmers. An
-interface isn’t idiomatic if programmers can’t rely on practices that
-have worked before to meet failure-handling responsibilities.
+of exceptions vs result checking for error handling. Failure handling
+is also super important to programmers. An interface isn’t idiomatic
+if programmers' hard-learned habits don't help them meet their
+failure-handling responsibilities.
 
-*I Love You, You Love Me, ARGGHH There Goes Timely Deallocation* is
+*I Love You, You Love Me, We're Surrounded by Uncollected Garbage* is
 about the big purple dinosaur of memory management: reference
 cycles. Can we enable developers used to garbage-collecting runtimes a
-way to write memory safe libraries? How does this fit with our “do as
-OCaml does and things just work” design principle? Can developers who
-aren’t used to thinking about ownership craft APIs, like W3 DOM trees,
-that appear cyclic?
+way to write memory safe libraries? How does this fit with our “when
+you do as OCaml does, things just work” design principle? Can
+developers who aren’t used to thinking about ownership craft
+interfaces, like W3 DOM trees, that appear cyclic?
 
 *The Problem With Introspection Is That It Has No End*, nor, PKD, does
 it have portable semantics. But introspection, and its mirror image
 reflection, are necessary in many language ecosystems for critical
-operations like serialization. How can Temper support those operations
+operations like serialization. Can Temper support those operations
 without sinking into a semantic tarpit?
 
 *When We Go Low, We Go High* talks about an opportunity. Some dynamic
 languages pair well with a compiled language: CPython with C, JS with
 Wasm. When translating, can we get the best of both?: idiomatic
 dynamic language interfaces that delegate most of the work to
-ahead-of-time optimized code.
+ahead-of-time optimized code. Can Temper make it easier for an
+organization gradually adding types to pre-exisitng code in a language
+that acquired a type system late in its development?
