@@ -6,6 +6,11 @@ authors:
 
 # Stretching the strangeness budget to bridge language communities
 
+This series of articles explores differences between programming
+languages &mdash; differences that might make each language the right
+tool for a different job, but that complicate translating concepts
+across languages.
+
 What good is a programming language that translates to all the others?
 If its semantics don't translate faithfully, not a lot. If they do,
 developers can easily identify common problems and craft shared
@@ -13,8 +18,7 @@ solutions even across language communities &mdash; the software
 community becomes less divided despite working on different
 stacks. Data scientists use Python, the web platform uses JavaScript,
 mobile app and backend people each use their own preferred languages
-(and legacy systems … ugh). But that doesn't need to fragment the
-software community.
+(and legacy systems … ugh). But our different stacks shouldn't divide us.
 
 *Temper* is a programming language designed for one thing: translating
 well to the others.  It fills this gap in our collective toolbox; it
@@ -24,23 +28,21 @@ community. One developer or a small team can use Temper to write a
 library that translates into all the other languages, supporting many
 language communities.
 
-Different languages are often the right tool for different jobs, but
-each has its own quirks. This series of articles explores these
-differences. Each starts with a short snippet of code, and looks at
-the problems with a naïve translation into various languages.
-Translating faithfully and providing idiomatic interfaces
+Each article in this series starts with a code fragment and explains
+problems with straightforward translations of it into various
+languages. Translating faithfully and providing idiomatic interfaces
 is hard, so understanding these differences is crucial to bridging
-language communities so the languages we work in don't dictate whom
-we can collaborate with.
+language communities and preventing the languages we work in from
+dictating whom we can collaborate with.
 
 <!-- more -->
 
 The first article, [*A Tangle of Strings*](./tangle-of-strings.md),
-starts small.  Strings are great for entertaining cats (=~ `cat`), but
-turns out they're good for other things too! Can we write simple
-string functions that translate efficiently while preserving
-semantics? To do so in a way that is both efficient and sensible to the
-working programmer, we need to first disentangle some semantic yarn.
+starts small.  Strings are great for entertaining `cat`s, but did you
+know they're good for other things too! Can we write simple string
+functions that translate efficiently while preserving semantics? To do
+so in a way that is both efficient and sensible to the working
+programmer, we need to first disentangle some semantic yarn.
 
 *When Words Collide* deals with naming collisions? Languages have
 subtly (and grossly) different approaches to naming style,
