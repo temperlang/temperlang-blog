@@ -68,7 +68,7 @@ This is not a Unicode primer.  If you're unfamiliar with terms like *codepoints*
 Those code samples above construct strings from integer codepoint values.
 The JavaScript `String.fromCodePoint(0x0FFFF)` constructs a string with a single codepoint, *U+FFFF*.  And the Python `chr(0x16F00)` constructs a string with one codepoint, *U+16F00*.
 
-An encoding is a way of converting codepoints (technically code units) into bytes that can be laid out in memory.  The way bytes are actually laid out by running programs is complicated (e.g. [SSO](https://tc-imba.github.io/posts/cpp-sso/), [content-aware optimizations](https://medium.com/@brijesh.sriv.misc/optimizing-string-memory-usage-in-java-11-4c34f4a1a08a#what-are-compact-strings)), but the table below shows how that second string in detail, \[U+16F00\], can be laid out by three languages that are emblematic of the three most widely used encodings.  U+16F00 is a [supplementary code point](https://www.unicode.org/glossary/#supplementary_code_point) so it's representation varies wildly across encodings.
+An encoding is a way of converting codepoints (technically code units) into bytes that can be laid out in memory.  The way bytes are actually laid out by running programs is complicated (e.g. [SSO](https://tc-imba.github.io/posts/cpp-sso/), [content-aware optimizations](https://medium.com/@brijesh.sriv.misc/optimizing-string-memory-usage-in-java-11-4c34f4a1a08a#what-are-compact-strings)), but the table below shows how that second string, \[U+16F00\], can be laid out by three languages that are emblematic of the three most widely used encodings.  U+16F00 is a [supplementary code point](https://www.unicode.org/glossary/#supplementary_code_point) so its representation varies wildly across encodings.
 
 <span id="table-utfs" name="table-utfs"></span>
 
@@ -81,14 +81,12 @@ An encoding is a way of converting codepoints (technically code units) into byte
 ## A cast of characters
 
 Lots of string corner cases deal with supplementary codepoints.
-Let's introduce some characters that will reoccur in code examples below.
+Let's introduce some recurring characters for the code examples below.
 
-Miao is a human language in the Hmong language family mostly spoken in
-and around Vietnam.  It's often written using
+Miao is a natural language in the Hmong language family mostly spoken in
+and around China and Vietnam.  It's often written using
 [Pollard Script](https://en.wikipedia.org/wiki/Pollard_script)
 which appears in Unicode in supplementary code pages ([U+16Fxx](https://www.unicode.org/charts/PDF/U16F00.pdf)).
-Many of its characters appear superficially similar to the Latin
-characters used by English writers because it was inspired by Cree.
 
 - '&#x16F00;' (U+16F00) Miao Letter Pa (seen above)
 - '&#x16F20;' (U+16F20) Miao Letter Yi Ka
@@ -118,10 +116,10 @@ Let's look at how strings are represented, as values in memory, and presented to
 We're going to look informally at a number of aspects and invariants, discussing each one in the context of a handful of languages.  Then we'll summarize in a table for far more languages.
 
 - *Ordering*: what does the language's primary comparison operator (`<`) mean applied to strings?
-  These turn out to group into UTF-16 order and codepoint order.
+  These turn out to group into UTF-16 order and codepoint order, though collation order makes a surprise appearance.
 - *Counting*: how does the language count characters?
   This turns out to group by common Unicode encoding: UTF-{8,16,32}.
-- *Indexing and Iteration*: how does the language allow dealing with parts of a string? If the language provides both integer loops `for (int i = 0; i < ...; ++i)` and *for each* style loops, does using them to iterate over strings result in the same kinds of code units?
+- *Indexing and Iteration*: how does the language allow dealing with parts of a string? If the language provides both integer loops `for (int i = 0; i < ...; ++i)` and *for each* style loops, do they enumerate string parts in the same way?
   Often, the latter is by codepoint even if the former is not.
 - *Concatenation*: How does the language combine parts of strings into wholes?  Do different code unit representations (especially UTF-16 surrogates) persist after concatenation?  Is the length of a concatenation the sum of the lengths of the parts?
   There is quite a lot of variety here.
@@ -158,7 +156,9 @@ Shush, COBOL.
 
 *Lexicographic ordering* simply means compare character by character.  The first pair of characters that differs determines the order.  If none differ, the shorter string is lesser.  As the Python reference noted above, lexicographic order can be generalized to any pair of sequences by comparing elements instead of characers.
 
-Why does JavaScript differ from Python3? JavaScript defines "character" as "UTF-16 code unit values", but Python3 treats strings as sequences of Unicode codepoints.  Other languages like Rust treat them as sequences of [Unicode scalar value]s which are subtly different.  (Python2 does one of those depending on the compiler flag that controls *sizeof(wchar)* used to compile the runtime!)
+'A' comes before 'B' in the alphabet so "" < "A" < "AA" < "AB" < "BA" < "BAA" < "BB".
+
+Why does JavaScript differ from Python3? JavaScript defines "character" as "UTF-16 code unit values", but Python3 treats strings as sequences of Unicode codepoints.  Other languages like Rust treat them as sequences of [Unicode scalar value]s which are subtly different.  (Python2 does one of those depending on the `-f{,no}short-wchar` compiler flag used to compile the runtime!)
 
 [Unicode scalar value]: https://www.unicode.org/glossary/#unicode_scalar_value
 
@@ -192,7 +192,7 @@ de_DE
 false
 ```
 
-Languages used for server software usually expose these rules via libraries like Java's [*java.text.Collator*](https://docs.oracle.com/javase/8/docs/api/java/text/Collator.html) so that a program can explicitly deal with human-language text in strings using the right locale for the particular end user which may come from an HTTP header or a user preferences database, not the current process's locale environment variables.
+Languages used for server software usually expose these rules via libraries like Java's [*java.text.Collator*](https://docs.oracle.com/javase/8/docs/api/java/text/Collator.html) so that a program can explicitly deal with human-language text in strings using the right locale for the end user.  That locale may come from an HTTP header or a user preferences database, not the current process's *LC\_\** environment variables.
 
 Lua is heavily used to script game actions.  Maybe in a game client, the current locale is a good indicator of the user's preference so this design choice may assist game devs in presenting an inventory list in a way that respects players' preferences.
 
@@ -233,6 +233,10 @@ Lua 5.4.7  Copyright (C) 1994-2024…
 
 Ugh, as shown in the [table above](#table-utfs), in Python it's 1 long, in JavaScript 2, and in Lua, it's 4.
 The only thing programming language designers actually agree on is powers of two.
+
+What, notionally, is a string length?
+An immutable list's length is the number of items its iterator produces.
+But string length is more reliably related to indexing.
 
 ### Indexing and iteration
 
@@ -282,7 +286,7 @@ Iterating over chars
 
 What's an easy way to see how indexing relates to codepoints?
 
-Let's ask different languages if the first character of one string is in another. We'll use our two Miao strings: U+16F00 and U+16F20.
+Let's ask different languages if the first character of one string is contained within another. We'll use our two Miao strings: \[U+16F00\] and \[U+16F20\].
 
 <div class="grid" markdown>
 
@@ -399,9 +403,9 @@ Type "help", "copyright", …
 Note that iterating over strings in Python3 produces shorter strings, not numeric values, so we have to apply the `ord` builtin to get a numeric value.
 Sometimes they're not shorter.  If you have a Python3 sequence of unknown type, you can't naively recurse into it because every single codepoint string is its own first element.
 
-Swift too: [Swift "characters"](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/stringsandcharacters/#Extended-Grapheme-Clusters) are Grapheme clusters.  This is a lovely, principled approach which means that the naive approach to *isPalindrome* in Swift works for complex Emojis like the [polar bear emoji (🐻‍❄️)](https://riedel.wtf/polar-bear-emoji/).
+[Swift "characters"](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/stringsandcharacters/#Extended-Grapheme-Clusters) are Grapheme clusters.  This is a lovely, principled approach which means that the naive approach to *isPalindrome* (more below) in Swift works for complex Emojis like the [polar bear emoji (🐻‍❄️)](https://riedel.wtf/polar-bear-emoji/).
 
-But most languages that have a *for each* style loop produce codepoints.  Partly this is because these loop constructs were late additions: after surrogates were added to UTF-8. For example, Go `range` loops iterate codepoints even though strings are just byte arrays under the hood.
+But most languages that have a *for each* style loop produce codepoints.  Partly this is because these loop constructs were late additions: after surrogates were added to Unicode. For example, Go's `range` loops iterate codepoints even though strings are just byte arrays under the hood.
 
 ### Concatenation
 
@@ -489,7 +493,7 @@ Most languages do not have that distinction.
 
 Python3 succeeds with the concatenation invariant above, but at the cost of allowing constructing strings that are not constructible in most other languages which raises its own interop concerns.
 
-For example, encoding a string to JSON and decoding it may not give you the same string.
+For example, encoding a string to JSON and decoding it may not get you back the original string.
 
 ```py
 🐚$ python3
@@ -620,12 +624,12 @@ We used a few languages above to explore some of the variety in how languages re
 
 Here's what each of those columns means and the associated values.
 
-- Internal Representation: the most probably internal representation of the main string type.  This might differ from runtime to runtime but sometimes is fixed by an ABI.
+- Internal Representation: the most probable internal representation of the main string type.  Languages can have different implementations, so this might differ from runtime to runtime but sometimes is fixed by a language's [Application Binary Interface (ABI)](https://en.wikipedia.org/wiki/Application_binary_interface).
     * *UTF-8 Conv*: contiguous bytes that are interpreted as UTF-8 by convention but might not be valid & minimal UTF-8
     * *UTF-8 USV*: contiguous bytes that are interpreted as UTF-8 *and* care has been taken to avoid non-minimal encodings and invalid Unicode Scalar values
     * *UTF-16*: contiguous pairs of bytes representing UTF-16 code units
-    * *UTF-16 USV*: like UTF-16 but non scalar values (orphaned surrogates) should not be encountered
-    * *Various*: a representation is chosen based on the semantic content usually for space efficiency reasons.  See the notes.
+    * *UTF-16 USV*: like UTF-16 but care has been taken to ensure valid scalar values &mdash; orphaned surrogates should not be encountered
+    * *Various*: a representation is chosen based on the string content, usually for space efficiency reasons.  See the notes.
     * *bytes × encoding*: there's some content and extra metadata explains, at runtime, how to interpret that content.
 - Order: how does the language's idiomatic way to compare string values order strings.
     * *L-CP*: Lexical by codepoint.  U+0FFFF < U+10000
@@ -647,7 +651,7 @@ Here's what each of those columns means and the associated values.
     * *UTF-16*: a number representing a UTF-16 code unit
     * *CP*: a codepoint
     * *Grapheme*: a grapheme cluster
-    * *Explicit*: the user chooses what to iterate over.  Strings are not iterable, but they expose methods that return a byte iterator or a codepoint iterator.
+    * *Explicit*: the user chooses what to iterate over.  Strings are not iterable, but they expose methods that return a byte iterator or a codepoint iterator, etc.
 - Surrogate handling: what happens when concatenating or joining strings when newly-adjacent chunks span a surrogate pair?
     * *Merged*: `"\uD800" + "\uDC00"` is indistinguishable from the single codepoint string U+10000.
     * *Distinct*: that concatenation is possible and produces a string with those two codepoints, not the single codepoint U+10000.
@@ -692,20 +696,29 @@ As shown above, different languages' runtimes have different ways of
 representing strings internally.  Does this implementation detail have
 to bleed through into the programmer's APIs?
 
+Different languages use "array" to mean different things. We mean a
+*contiguous* region of memory divided into *same-size* chunks.
+
 Early programming languages represented strings as arrays of
 characters.  Before Unicode and UTF-8 that worked.  Arrays allow
-*random access*.  To get the third character: *myString\[2\]*.
+*random access*.  *myString\[2\]* gets the third character in constant
+time.
 
 As the [UTF table above](#table-utfs) shows, a codepoint might take
 between 1 and 4 array entries.  Two of the three main Unicode
 encodings, UTF-8 and UTF-16, are
 [variable-width](https://en.wikipedia.org/wiki/Variable-width_encoding),
-and the third is not space efficient.
+and the third does not make efficient use of space.
 
 !!! note "Problem"
 
     Random access worked for the locale-specific, fixed-width encodings that
     pre-dated Unicode.
+
+    Originally, Unicode was planned to fit all possible codepoints in
+    two bytes &mdash; UCS-2 was a fixed-width encoding.
+    Unicode expanded to include supplementary codepoints, from 2<sup>16</sup>
+    codepoints to 17×2<sup>16</sup>. That made fixed-width encoding impractical.
 
     As Unicode took over from locale-specific encodings, variable-width
     encodings took over.
@@ -713,7 +726,7 @@ and the third is not space efficient.
     The indexable element is no longer a semantically meaningful element,
     but languages' string designs still allow and encourage random access.
 
-There's no way to find the codepoint at an arbitrary codepoint in a
+There's no way to find the codepoint at an arbitrary index in a
 string without scanning and counting, unless you know a priori that
 each codepoint corresponds to a constant number of elements.
 
@@ -722,8 +735,7 @@ represents strings into the language's semantics.
 
 Next, we'll look at how to support familiar string operations without
 random access.  It's true that some important string algorithms depend on random access.  For example, algorithms like *Boyer-Moore*, used by
-*someString.indexOf\(possibleSubstring\)*,
-[require random access][boyer-moore-boost].
+*myString.indexOf\(possibleSubstring\)*, [require random access][boyer-moore-boost].
 But, as seen above with *includes* and *in*, when those algorithms don't do extra work to account for code unit differences, their semantics diverge.
 
 ## Goals and non-goal
@@ -733,37 +745,80 @@ language boundaries: enable distributed systems where one backend
 language is talking to Python doing data science, and other languages
 on mobile devices or web browsers.  Those systems all send and receive
 strings over network pipes, so string processing is an important use
-case for Temper.  Here's our goals for Temper translation of stringy code:
+case for Temper.  Here are our goals for Temper translation of stringy code:
 
-First, we need to **avoid unnecessary copies**.  Parsing often proceeds by extracting a prefix from the string, analyzing it, and then proceeding with the remaining unprocessed suffix.  We could overcome random access by converting strings to a random-access-efficient representation as they enter translated code and back as they leave.  Bu this causes problems if a suffix might need to be passed to code that was not translated from Temper.  Doing so for each suffix of a large string would turn O(n) parsing algorithms into O(n&sup2;).  Things just work better when translated code operates on the same string type as the rest of the code in the language without implicit conversions.
+First, we need to **avoid unnecessary copies**.  Parsing often proceeds by extracting a prefix from the string, analyzing it, and then proceeding with the remaining unprocessed suffix.  We could overcome random access by converting strings to a random-access-efficient representation as they enter translated code and back as they leave.  Bu this causes problems if a suffix might need to be passed to code that was not translated from Temper.  Copying each suffix of a large string would turn O(n) parsing algorithms into O(n&sup2;).  Things just work better when translated code operates on the same string type as the rest of the code in the language without implicit conversions.
 
-Second, we need to **support left-to-right and right-to-left processing**.  Parsing often proceeds left-to-right, but a lot of code needs to do suffix checks to: "is this file path a `.png` file?" for example.
+Second, we need to **support left-to-right and right-to-left processing**.  Parsing often proceeds left-to-right, but a lot of code needs to do suffix checks: "is this a path to a `.png` file?" for example.
 
 Third, allow for **efficient available character checks**.  As seen above, counting codepoints might be O(n), but often parsing algorithms don't need the count.  Parsing algorithms can often make do with *constant lookahead*: for example, to know whether the next token is C# keyword `false` or a longer identifier like `falsey`, I need one character of lookahead after the 'e'.  For a constant *k*, determining whether there are *k* characters remaining can often be done in constant time for long strings, which is where the difference with exhaustive counting really matters. In UTF-8, if the remaining array length is *k &times; 4* or greater, then there're at least *k* since each codepoint can take at most 4 array elements.
 
 Fourth, we should **avoid entangling strings with threads**.  Using random access to walk a string left to right can be efficient if you memoize information about the last access, but multiple threads could be operating on strings in parallel.  Introducing memory barriers or concurrent data structures is a source of complexity that backend writers would be better off not having to worry about.
 
-Fifth, the Temper representation of positions within a string should be **comparable** in constant time.  A position near the start should be *less than* a position near the end, and these checks should be doable within tight loops.
+Fifth, the Temper representation of positions within a string should be **comparable** in constant time.  A position near the start should be *less than* a position near the end, and these checks should be doable within tight loops.  This goal is not uncontroversial.  Many string operations do not need to compare string positions, but there are use cases.  Finding the matches of several substrings in a large string in order can be implemented using a min-priority-queue over indexes for each substring.
 
 A non-goal: It is **unnecessary to have identical representations** for all target languages for a position or positions within a string.  For example, if a position within a string is translatable to an integer, it need not be the same integer for all target languages as long as it cannot be compared as equal to an integer from within Temper.  String positions already need to be converted to a canonical form if externalized[^33], sent via JSON to a web service, for example.
 
 [^33]: [String Index Overhaul](https://github.com/dabrahams/swift-evolution/blob/string-index-overhaul/proposals/NNNN-string-index-overhaul.md#introduction): "the opacity of these index types makes it difficult to record String or Substring positions in files or other archival forms, and reconstruct the original positions with respect to a deserialized String or Substring"
 
-A related but **severable** goal is to **decode orphaned surrogates in JSON strings**.  JSON allows representing non [Unicode scalar value] strings, and this is sometimes used to encode byte arrays: `{ "myBytes": "\uD800" }`.  That information needs to be available to complex value decoders that know that that string should actually decode to something non-string like.  JSON decoding machinery already needs a way to suspend judgement on large number literals, numbers that wouldn't fit in 64 bit integers for example, so that they can eventually decode to [arbitrary precision values](https://en.wikipedia.org/wiki/Arbitrary-precision_arithmetic), so the same approach can be used to allow byte-decoding of non-USV strings without complicating the core string type.
+A related but **severable** goal is to **decode orphaned surrogates in JSON strings**.  JSON allows representing non [Unicode scalar value] strings, and this is sometimes used to encode byte arrays: `{ "myBytes": "\uD800" }`.  That information needs to be available to complex value decoders that know that that string should actually decode to something non-string like.  JSON decoding machinery already needs a way to suspend judgement on large number literals, numbers that wouldn't fit in 64 bit integers for example, so that they can eventually decode to [arbitrary precision values](https://en.wikipedia.org/wiki/Arbitrary-precision_arithmetic). The same technique can be used to allow byte-decoding of non-USV strings without complicating the core string type.
 
 ## A translatable semantics for strings
 
-Let's look at some Temper code for a simple string operation:
-*isPalindrome*.  A string is a "palindrome" if reversing its codepoints
-yields the same string.  But instead of reversing and
-comparing for equality, we take position from the start and end until
-they meet in the middle.
+Let's look at code for a simple string operation: *isPalindrome*.  A string is a "palindrome" if reversing it yields the same string.
 
-There's a hazard here.  [Remember](#cast-of-chars-encoded) that Greek letter Gamma, &#x393;, is represented in UTF-8 with two bytes, CE<sub>16</sub> 93<sub>16</sub>.  If we checked the UF-8 representation byte by byte, we would conclude that the string "&#x393;" is not a palindrome even though by same analysis using UTF-16 or UTF-32 it is.
+There's a hazard here: what does "reverse" mean. [Remember](#cast-of-chars-encoded) that Greek letter Gamma, &#x393;, is represented in UTF-8 with two bytes, CE<sub>16</sub> 93<sub>16</sub>. If we reversed the UTF-8 representation byte by byte, we would conclude that the string "&#x393;" is not a palindrome even though by same analysis using UTF-16 or UTF-32 it is.
 
-Below, the first tab shows Temper code.  It looks like widely used
-programming languages.  The subsequent tabs show how it translates
-into some languages we looked at above.  (I cleaned up the
+Here are na&iuml;ve implementations of *isPalindrome* in Lua and JavaScript that show this hazard. Instead of actually reversing the string, each loops from both ends until it meets in the middle comparing corresponding "characters".
+
+<div class="grid" markdown="1">
+
+```lua
+🐚$ lua
+Lua 5.4.7  Copyright (C) 1994-2024…
+> function isPalindrome(s)
+>>   local i = 1;
+>>   local j = #s;
+>>   while i < j do
+>>     local si = string.byte(s, i)
+>>     local sj = string.byte(s, j)
+>>     if si ~= sj then
+>>       return false;
+>>     end
+>>     i = i + 1;
+>>     j = j - 1;
+>>   end
+>>   return true;
+>> end
+> isPalindrome("Γ")
+false
+```
+
+```js
+🐚$ node
+Welcome to Node.js v23.11.0.
+Type ".help" for more information.
+> function isPalindrome(s) {
+...   for (let i = 0, j = s.length - 1;
+...        i < j;
+...        ++i, --j) {
+...     if (s[i] != s[j]) {
+...       return false;
+...     }
+...   }
+...   return true
+... }
+undefined
+> isPalindrome("Γ")
+true
+```
+
+</div>
+
+Now let's do the same with Temper and take a look at the translations.
+Below, the first tab shows the Temper code.  It looks like widely used
+programming languages.  The subsequent tabs show how the Temper translates
+into various languages we looked at above.  (I cleaned up the
 translations a bit; I need to do more work on unnecessary temporary
 elimination)
 
@@ -914,6 +969,70 @@ This approach, a separate string position type that corresponds to but which are
 
 *StringIndex*es connects to the local type for string indexing: typically *int* or *size_t*.  That doesn't prevent Temper's *Int* type from also connecting to *int*.
 
+And here's how those translations perform. (`temper repl -b js` starts up a JavaScript interactive shell with the Temper translation pre-loaded. It's Temper's way of making it easy to explore translated libraries from other language users' perspectives)
+
+<div class="grid" markdown="1">
+
+```js
+🐚$ temper repl -b js
+Running …/bin/node v23.11.0
+REPL is running with these Temper
+libraries pre-loaded:
+╔════════════╦═════════════╗
+║Library Name║JS identifier║
+╠════════════╬═════════════╣
+║pally       ║pally        ║
+╚════════════╩═════════════╝
+Type ".help" for more information.
+> let { isPalindrome } = pally
+undefined
+> isPalindrome('step on no pets')
+true
+> isPalindrome('step on some pets')
+false
+> isPalindrome('palindrome')
+false
+> isPalindrome('L')
+true
+> isPalindrome('Γ')
+true
+> isPalindrome('𖼀𖼠')
+false
+> isPalindrome('𖼀𖼠𖼀')
+true
+```
+
+```lua
+🐚$ temper repl -b lua
+Starting lua interactive shell.
+Use these requires to access translations.
+╔══════════════╦════════════════╗
+║Temper library║Lua require     ║
+╠══════════════╬════════════════╣
+║pally         ║require('pally')║
+╚══════════════╩════════════════╝
+Lua 5.4.7  Copyright (C) 1994-2024 Lua.org, PUC-Rio
+> isPalindrome = require('pally').isPalindrome
+> isPalindrome('step on no pets')
+true
+> isPalindrome('step on some pets')
+false
+> isPalindrome('palindrome')
+false
+> isPalindrome('L')
+true
+> isPalindrome('Γ')
+true
+> isPalindrome('𖼀𖼠')
+false
+> isPalindrome('𖼀𖼠𖼀')
+true
+```
+
+</div>
+
+Temper's translations have consistent semantics, unlike our hand-coded Lua and JavaScript above.
+
 Here's another translation example: find the first ASCII space character in a string.  It uses a loop that simply advances using *.next*.
 
 ===+ "Temper"
@@ -1003,14 +1122,45 @@ target language type.  Here Temper's *Int*, *StringIndex* and *NoStringIndex*
 types all translate to Java *int*.  (A sealed type may have multiple sub-types that connect to the same target language type, but it must be able to answer [RTTI](https://en.wikipedia.org/wiki/Run-time_type_information) questions about them.)
 This also helps with translation in languages that conflate strings with other kinds of values.  For example, in Perl, PHP, and MUMPS, there's no hard distinction between numbers, booleans, and strings.  And in some older languages, it's idiomatic to represent dates as 8-digit strings.
 
-In Temper, we bias towards semantic choices that prevail in languages preferred for high-{performance,throughput} code, so our string comparison is lexical by codepoint.  So to answer the question posed at the top of this article:
+In Temper, we bias towards semantic choices that prevail in languages preferred for high-{performance,throughput} code, so our string comparison is lexical by codepoint like languages that use UTF-8 under the hood.  So to answer the question posed at the top of this article:
 
 ```js
 🐚$ temper repl
-$ "\uFFFF" < "\u{10000}"
+$ "\uFFFF" < "\u{16F00}"
 interactive#0: true
 $
 ```
+
+## Drawbacks
+
+This design is not without drawbacks.
+
+As noted, we don't have a constant time analogue of *string length*. We've provided alternatives and taken care to avoid confusion.
+
+Comparison of string positions, when those positions were not derived
+from the same string, is under-defined.  This may be a source of
+developer confusion, if someone, for example, writes a zip function
+for two strings using one index.
+
+Externalizing string positions is hard. For example, turning a *StringIndex* into JSON that can be decoded by a program written in another language to index into the same string. The integer value of a *StringIndex* can be turned into JSON but if the JSON decoder uses a different native representation (or, like Swift, does not allow random access), the decoded integer is not, by itself, useful.
+
+We looked into slice semantics before switching to this position-oriented design.
+A slice is a region within a string typically represented as a triple of (characters, start offset, end offset). Since a slice points to its underlying string, it seems unambiguous, and it can provide strong by-construction guarantees that the offsets lie at codepoint boundaries.
+Unfortunately slice semantics are not a magic bullet:
+
+- Comparison across strings is still under-defined so you don't
+  magically get consistent semantics.
+- It took significant effort to learn to use slice style everywhere.
+- The code written using slices looked very different so it fails
+  our goal for Temper to be widely readable by people who have never
+  written Temper, for example, people debugging a problem they're
+  having with a library translated from Temper into their language.
+- Externalizing slices is in some ways easier and in some ways harder.
+  You know the string the offsets point into, but formals like JSON
+  often have no standard way to specify a constant pool, so
+  externalizing many slices might involve repeating a larger string
+  many times, or just the substring, which means that slice comparison
+  within the same language will not be preserved.
 
 ## Conclusions
 
