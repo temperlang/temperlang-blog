@@ -765,9 +765,9 @@ A related but **severable** goal is to **decode orphaned surrogates in JSON stri
 
 ## A translatable semantics for strings
 
-Let's look at code for a simple string operation: *isPalindrome*.  A string is a "palindrome" if reversing it yields the same string.
+Let's look at code for a simple string operation: *isPalindrome*.  A string is a palindrome if reversing it yields the same string.
 
-There's a hazard here: what does "reverse" mean. [Remember](#cast-of-chars-encoded) that Greek letter Gamma, &#x393;, is represented in UTF-8 with two bytes, CE<sub>16</sub> 93<sub>16</sub>. If we reversed the UTF-8 representation byte by byte, we would conclude that the string "&#x393;" is not a palindrome even though by same analysis using UTF-16 or UTF-32 it is.
+There's a hazard here: what does "reverse" mean. [Remember](#cast-of-chars-encoded) that Greek letter Gamma, &#x393;, is represented in UTF-8 with two bytes, CE<sub>16</sub> 93<sub>16</sub>. If we reversed the UTF-8 representation byte by byte, we would conclude that the string "&#x393;" is not a palindrome even though it is when reversing UTF-16 or UTF-32 code units.
 
 Here are na&iuml;ve implementations of *isPalindrome* in Lua and JavaScript that show this hazard. Instead of actually reversing the string, each loops from both ends until it meets in the middle comparing corresponding "characters".
 
@@ -965,7 +965,7 @@ Code that derives *StringIndex*es in this way can be translated to languages tha
 
 One thing to note is that *String.begin* translates to 0 in most languages, except languages like Lua which (like UCSD which introduced Pascal strings) use 1-indexed strings.
 
-This approach, a separate string position type that corresponds to but which are semantically distinct from ints/size\_t, is very similar to Swift's approach[^30] mentioned in the comparative linguistics summary above.  Temper arrived at this design feature independently, but after Swift.
+This approach, a separate string position type that corresponds to but which is semantically distinct from ints/size\_t, is very similar to Swift's approach[^30] mentioned in the comparative linguistics summary above.  Temper arrived at this design feature independently, but after Swift.
 
 *StringIndex*es connects to the local type for string indexing: typically *int* or *size_t*.  That doesn't prevent Temper's *Int* type from also connecting to *int*.
 
@@ -1169,7 +1169,7 @@ With careful API design combined with a flexible type connection mechanism we ma
 There are still wrinkles.  No translation is going to account for all quirks of the target language.  As noted above, some languages allow representing strings that others don't.  Python3 can distinguish strings with misplaced surrogates that UTF-16 based runtimes can't and which Rust and Swift disallow.  How can one test for inputs that can't be constructed in many languages but which may nevertheless come from bespoke code in some languages?
 The best we can guarantee is that no Temper translation produces such strings unless given such strings as inputs.
 
-Later articles in this series will touch on how string semantics intersect with other language design complicators: how a generic function, for example find the least value in a list, could know to use lexicographic order for a string list and numeric order for a list of numbers.
+Later articles in this series will touch on how string semantics intersect with other language design complicators: how a generic function to, for example, find the least value in a list, could know to use lexicographic order for a string list and numeric order for a list of numbers. Even in languages without types or with generic erasure.
 
 If you liked this, be sure to follow the rest of our series on [stretching the strangeness budget to interoperate with many languages](./stretching.md).
 
