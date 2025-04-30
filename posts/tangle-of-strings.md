@@ -1122,15 +1122,6 @@ target language type.  Here Temper's *Int*, *StringIndex* and *NoStringIndex*
 types all translate to Java *int*.  (A sealed type may have multiple sub-types that connect to the same target language type, but it must be able to answer [RTTI](https://en.wikipedia.org/wiki/Run-time_type_information) questions about them.)
 This also helps with translation in languages that conflate strings with other kinds of values.  For example, in Perl, PHP, and MUMPS, there's no hard distinction between numbers, booleans, and strings.  And in some older languages, it's idiomatic to represent dates as 8-digit strings.
 
-In Temper, we bias towards semantic choices that prevail in languages preferred for high-{performance,throughput} code, so our string comparison is lexical by codepoint like languages that use UTF-8 under the hood.  So to answer the question posed at the top of this article:
-
-```js
-🐚$ temper repl
-$ "\uFFFF" < "\u{16F00}"
-interactive#0: true
-$
-```
-
 ## Drawbacks
 
 This design is not without drawbacks.
@@ -1162,9 +1153,19 @@ Unfortunately slice semantics are not a magic bullet:
   many times, or just the substring, which means that slice comparison
   within the same language will not be preserved.
 
+Temper's string order might not match the runtime's. This could cause mismatches between, for example, iteration order for sorted collections implemented in Temper and native implementations. There is no perfect choice for string sort order, but Temper views inconsistent semantics as the clear worse choice. All else being equal, Temper's design biases towards semantic choices that prevail in languages preferred for high-{performance,throughput} code, so our string comparison is lexical by codepoint like languages that use UTF-8 under the hood. There's some indications that this string order is emerging as a network string order[^34]. Going back to the question posed at the top of this article:
+
+```temper
+🐚$ temper repl
+$ "\uFFFF" < "\u{16F00}"
+interactive#0: true
+```
+
+[^34]: [JSON Everything / A vocabulary for extended validation of Arrays &sect; 3.2 Ordering](https://docs.json-everything.net/schema/vocabs/array-ext/#ordering): "values should be ordered by Unicode code point"
+
 ## Conclusions
 
-With careful API design combined with a flexible type connection mechanism we managed to provide a familiar experience for dealing with a core type with a storied history while translating well and avoiding semantic mismatches.  This comes at the cost of complicating some low-level algorithms like Boyer-Moore that [require random access][boyer-moore-boost] but we're hopeful that the same connection mechanism largely obviates the need to implement those, and if needed, we can provide a solution that lets code branch on the native encoding where random access is essential.
+Careful API design combined with a flexible type connection mechanism provide a familiar experience for dealing with a core type with a storied history while translating well and avoiding gross semantic mismatches. This comes at the cost of complicating some low-level algorithms like Boyer-Moore that [require random access][boyer-moore-boost] but we're hopeful that the same connection mechanism largely obviates the need to implement those, and if needed, we can provide a solution that lets code branch on the native encoding where random access is essential.
 
 There are still wrinkles.  No translation is going to account for all quirks of the target language.  As noted above, some languages allow representing strings that others don't.  Python3 can distinguish strings with misplaced surrogates that UTF-16 based runtimes can't and which Rust and Swift disallow.  How can one test for inputs that can't be constructed in many languages but which may nevertheless come from bespoke code in some languages?
 The best we can guarantee is that no Temper translation produces such strings unless given such strings as inputs.
