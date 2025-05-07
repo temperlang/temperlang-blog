@@ -162,11 +162,11 @@ Why does JavaScript differ from Python3? JavaScript defines "character" as "UTF-
 
 [Unicode scalar value]: https://www.unicode.org/glossary/#unicode_scalar_value
 
-#### Human language ordering is not lexicographic
+#### Natural language ordering is not lexicographic
 
 Fun fact, language designers do not agree.
-In Lua&ge;5, the `<` operator performs *locale-sensitive* comparison.
-Unicode defines *collation rules* which capture the dictionary sorting rules for human languages.
+In Lua&ge;5, the `<` operator performs *locale-sensitive*[^17a] comparison.
+Unicode and libc define *collation rules* which capture the dictionary sorting rules for natural languages.
 
 [UTR-10](https://www.unicode.org/reports/tr10/#Example_Differences_Table) has this example showing that a German reader would expect 'o'-umlaut next to 'o' in a sorted list but a Swedish reader would not.
 
@@ -192,7 +192,7 @@ de_DE
 false
 ```
 
-Languages used for server software usually expose these rules via libraries like Java's [*java.text.Collator*](https://docs.oracle.com/javase/8/docs/api/java/text/Collator.html) so that a program can explicitly deal with human-language text in strings using the right locale for the end user.  That locale may come from an HTTP header or a user preferences database, not the current process's *LC\_\** environment variables.
+Languages used for server software usually expose these rules via libraries like Java's [*java.text.Collator*](https://docs.oracle.com/javase/8/docs/api/java/text/Collator.html) so that a program can explicitly deal with natural language text in strings using the right locale for the end user.  That locale may come from an HTTP header or a user preferences database, not the current process's *LC\_\** environment variables.
 
 Lua is heavily used to script game actions.  Maybe in a game client, the current locale is a good indicator of the user's preference so this design choice may assist game devs in presenting an inventory list in a way that respects players' preferences.
 
@@ -236,7 +236,7 @@ The only thing programming language designers actually agree on is powers of two
 
 What, notionally, is a string length?
 An immutable list's length is the number of items its iterator produces.
-But string length is more reliably related to indexing.
+But string length is more reliably related to indexing than to iteration.
 
 ### Indexing and iteration
 
@@ -491,6 +491,10 @@ Most languages do not have that distinction.
 1. UTF-16 centric languages like Java, JavaScript, and C# do not because they do not track whether a surrogate was part of a pair or not.
 2. Rust because its strings are not codepoints for [security reasons](https://capec.mitre.org/data/definitions/80.html).  They are minimal UTF-8 encoded [Unicode scalar value]s by construction.
 
+Notably, the [WTF-8] exists to allow representing "in a way compatible with UTF-8, text from systems such as JavaScript and Windows that use UTF-16 internally but don’t enforce the well-formedness invariant that surrogates must be paired" and notes that this "is a hack intended to be used internally in self-contained systems."
+
+[WTF-8]: https://simonsapin.github.io/wtf-8/
+
 Python3 succeeds with the concatenation invariant above, but at the cost of allowing constructing strings that are not constructible in most other languages which raises its own interop concerns.
 
 For example, encoding a string to JSON and decoding it may not get you back the original string.
@@ -635,7 +639,7 @@ Here's what each of those columns means and the associated values.
     * *L-CP*: Lexical by codepoint.  U+0FFFF < U+10000
     * *L-U16*: Lexical by UTF-code unit.  U+0FFFF > U+10000
     * *L\**: Lexical by something.  Encoding metadata might be used to pick a comparison method.
-    * *UTR-10*: Comparison depends on a human-language locale as explained in [Unicode technical report #10](https://www.unicode.org/reports/tr10/)
+    * *Nat*: Comparison depends on a natural language locale as explained in [Unicode technical report #10](https://www.unicode.org/reports/tr10/) or [libc collation](https://www.gnu.org/software/libc/manual/html_node/Collation-Functions.html)
 - Counting: What does the idiomatic string length operator count?
     * *Octet*: bytes in the underlying array
     * *UTF-16*: UTF-16 code units in the underlying array of two-byte chunks
@@ -755,13 +759,17 @@ Third, allow for **efficient available character checks**.  As seen above, count
 
 Fourth, we should **avoid entangling strings with threads**.  Using random access to walk a string left to right can be efficient if you memoize information about the last access, but multiple threads could be operating on strings in parallel.  Introducing memory barriers or concurrent data structures is a source of complexity that backend writers would be better off not having to worry about.
 
-Fifth, the Temper representation of positions within a string should be **comparable** in constant time.  A position near the start should be *less than* a position near the end, and these checks should be doable within tight loops.  This goal is not uncontroversial.  Many string operations do not need to compare string positions, but there are use cases.  Finding the matches of several substrings in a large string in order can be implemented using a min-priority-queue over indexes for each substring.
+Fifth, we should allow **constant-time string position comparison**.  A position near the start of a given string should be *less than* a position near the end, and these checks should be usable within tight loops.  This goal is not uncontroversial &mdash; we could disallow comparison of string positions.  Many string operations do not need to compare string positions, but there are use cases.  Finding the matches of several substrings in a large string in order can be implemented using a min-priority-queue over indexes for each substring.
 
 A non-goal: It is **unnecessary to have identical representations** for all target languages for a position or positions within a string.  For example, if a position within a string is translatable to an integer, it need not be the same integer for all target languages as long as it cannot be compared as equal to an integer from within Temper.  String positions already need to be converted to a canonical form if externalized[^33], sent via JSON to a web service, for example.
 
 [^33]: [String Index Overhaul](https://github.com/dabrahams/swift-evolution/blob/string-index-overhaul/proposals/NNNN-string-index-overhaul.md#introduction): "the opacity of these index types makes it difficult to record String or Substring positions in files or other archival forms, and reconstruct the original positions with respect to a deserialized String or Substring"
 
-A related but **severable** goal is to **decode orphaned surrogates in JSON strings**.  JSON allows representing non [Unicode scalar value] strings, and this is sometimes used to encode byte arrays: `{ "myBytes": "\uD800" }`.  That information needs to be available to complex value decoders that know that that string should actually decode to something non-string like.  JSON decoding machinery already needs a way to suspend judgement on large number literals, numbers that wouldn't fit in 64 bit integers for example, so that they can eventually decode to [arbitrary precision values](https://en.wikipedia.org/wiki/Arbitrary-precision_arithmetic). The same technique can be used to allow byte-decoding of non-USV strings without complicating the core string type.
+A related but separable goal is to **decode orphaned surrogates in JSON strings**.  JSON allows representing non [Unicode scalar value] strings, and this is sometimes used to encode byte arrays: `{ "myBytes": "\uD800" }`.  That information needs to be available to complex value decoders that know that that string should actually decode to something non-string like.  JSON decoding machinery already needs a way to suspend judgement on large number literals, numbers that wouldn't fit in 64 bit integers for example, so that they can eventually decode to [arbitrary precision values](https://en.wikipedia.org/wiki/Arbitrary-precision_arithmetic). The same technique can be used to allow byte-decoding of non-USV strings without complicating the core string type.
+
+Another related but separable goal is to **represent file paths as values**.  Windows file names can be any sequence of byte pairs[^Rust-issue-wtf8-for-paths], and Linux file names can be any byte sequence that do not contain NUL or '/', usually but not always UTF-8.  These byte sequences do not always decode cleanly to strings.  Nothing is gained by complicating the string type to represent arbitrary file paths if doing so will still not solve the corresponding problem for other file systems.  Instead file system APIs should produce opaque path values that store the volume-specific representation and provide a string decoding that fails gracefully if the internal representation doesn't follow prevailing conventions and provide a URL \%-encoded variant that is guaranteed to succeed.
+
+[^Rust-issue-wtf8-for-paths]: https://github.com/rust-lang/rust/issues/12056#issuecomment-53953016
 
 ## A translatable semantics for strings
 
