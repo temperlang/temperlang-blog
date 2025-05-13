@@ -39,7 +39,9 @@ True
 
 </div>
 
-How could Python and JavaScript come up with different answers to this basic string question?!?
+Holy low-level semantics, Batman! How could Python and JavaScript come up with different answers to this basic string question?!?
+
+Watch our interpid heroes investigate languages' different string representations, unmask the villain injecting chaos into string processing code, and pull a trusty solution from their overloaded yet form-fitting utility belts.
 
 <!-- more -->
 

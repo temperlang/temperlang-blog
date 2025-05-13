@@ -44,20 +44,19 @@ functions that translate efficiently while preserving semantics? To do
 so in a way that is both efficient and sensible to the working
 programmer, we need to first disentangle some semantic yarn.
 
+*Generically Speaking* talks about generic operations. Some languages
+don’t distinguish between strings and integers at runtime (Perl, PHP),
+others between integers and floats (JavaScript, Lua and many
+others). How can we translate a simple, generic *minimum* function so
+that it performs string comparison given strings and numeric comparison
+given ints? How can we do this while keeping code size small for
+languages like JavaScript where code is sent over the network?
+
 *When Words Collide* deals with naming collisions. Languages have
 subtly (and grossly) different approaches to naming style,
 overloading, overriding, masking, keyword reservation. What can one
 do when the perfect name for a function in one language is forbidden
 in another?
-
-*Generically Speaking* talks about generic operations. Some languages
-don’t distinguish between strings and integers at runtime (Perl, PHP),
-others between integers and floats (JavaScript, Lua and many
-others). How can we translate a simple, generic *minimum* function so
-that it uses a lexicographic string comparison given strings and
-a numeric comparison given ints? How can we do this without expanding
-code size (as monomorphization tends to) for languages like JavaScript
-where code has to be sent over the wire?
 
 *Well, I Never!, But When I Do* discusses bottom types. Some languages
 have a type that conveys “expressions of this type never produce a
