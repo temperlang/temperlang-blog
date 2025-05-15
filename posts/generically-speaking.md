@@ -39,7 +39,7 @@ undefined
 
 That array! *Quel désarroi?!*
 
-To translate well across programming languages, we need to impose some order on generic operations like&mdash;well&mdash;ordering. The more generic the code, the more important context is. Join us as we pick over a soup of generic jargon: runtime type information, monomorphization, inheritance and erasure. Finally we'll discuss how some type declaration tweaks lets Temper translate well to many many languages.
+Temper aims to translate well to all the other programming languages. To do that, we need to impose some order on generic operations like&mdash;well&mdash;ordering. The more generic the code, the more important context is. Join us as we look at languages' differing approaches to genericity and find some novel tweaks that let us translate generic functions well to many many languages.
 
 <!-- more -->
 
@@ -125,7 +125,7 @@ But how did PHP, which was heavily influenced by Perl know to compare numericall
 
 [^php.operators.comparison]: [php.net Manual &sect; Comparison Operators](https://www.php.net/manual/en/language.operators.comparison.php)
 
-> If both operands are numeric strings, or one operand is a number and the other one is a numeric string, then the comparison is done numerically. These rules also apply to the switch statement. The type conversion does not take place when the comparison is === or !== as this involves comparing the type as well as the value.
+> If both operands are numeric strings, or one operand is a number and the other one is a numeric string, then the comparison is done numerically. These rules also apply to the switch statement. The type conversion does not take place when the comparison is `===` or `!==` as this involves comparing the type as well as the value.
 
 PHP's default sort flag, *SORT\_REGULAR*, tries to side-step confusion between numeric and string order by defining a different order for *numeric strings* than for *regular strings*. The authors can see the appeal for this design choice in a language that often deals with lists of strings from numeric database columns, but potentially picking a different sort order for different pairs of elements trades one set of bugs for another.
 
@@ -135,74 +135,135 @@ So any sorting code just need to always specify an order. Problem solved.
 
 But this article isn't about ordering. It's about **generic functions**. A generic function is one that can work with many types. For example, sorting is generic when the sorting algorithm can be *generalized* to sort lists of numbers, strings, dates, etc. But as shown, context matters; you often need to specialize a generic function with a specific type's conception of, in the case of *sort*, ordering.
 
-Rather than a full sorting algorithm, let's consider a simpler generic function.
+As seen below, a language for generic programming has to allow mixing a general framework of *type-agnostic* instructions with a few specialized instructions whose behaviour depends on the *actual* type *T*.
 
-- *leastValueOf* takes a list of some type, *T*, and returns the least element.
-- It also takes a *fallback* value which it returns when the list is empty.
-- Unless specified otherwise it compares values using *T*'s natural order.
-
-In Java our function might look like the below:
-
-```java
-public static <T>
-T leastValueOf(
-  Iterable<T> elements,
-  T fallback,
-  Comparator<T> comparator
-) {
-  Iterator<T> it = elements.iterator();
-  // Use fallback if there's nothing
-  if (!it.hasNext()) {
-    return fallback;
+```ts
+/** A string form of the given list like "[..., ..., ...]". */
+let stringifyList<T>(list: List<T>): String {
+  let sb = new StringBuilder();
+  sb.append("[");
+  var needsComma = false;
+  for (let element of list) {
+    if (needsComma) { sb.append(", "); }
+    sb.append(
+      ⚠️ element ⚠️
+    );
+    needsComma = true;
   }
-  T leastSoFar = it.next();
-  // Loop over the elements after the first swapping
-  // them if leastSoFar is strictly greater according to
-  // comparator.
-  while (it.hasNext()) {
-    T candidate = it.next();
-    if (comparator.compare(leastSoFar, candidate) > 0) {
-      leastSoFar = candidate;
-    }
-  }
-  // We've considered all elements so leastSoFar is the least
-  // assuming comparator is transitive.
-  return leastSoFar;
-}
-
-public static <T extends Comparable<? super T>>
-T leastValueOf(
-  Iterable<T> elements,
-  T fallback
-) {
-  return leastValueOf(elements, fallback, Comparator.<T>naturalOrder());
+  sb.append("]");
+  return sb.toString();
 }
 ```
 
-We'll discuss Temper's goals for genericity as a language meant to
-translate well to all these others.
+All of that code except for the line between the ⚠️s is generic.
+Its behaviour does not depend on the type of list element.
 
-Then, we'll discuss common features of languages that someone implementing
-an equivalent function in a specific language might lean on to implement
-*leastValueOf*.
+But that one line really matters to the semantics of the function.
+Here's boolean list formatting code in three widely used languages when
+we *don't* take care to specify exactly how the stringification happens.
+We get three different strings: `[True, False]`, `[1, ]`, and `[true, false]`.
 
-Finally, we'll show *leastValueOf* implement in Temper and explain how
-we achieve faithful translation by lowering some trait-like definitional
-elements into more widely available language affordances.
+<div class="grid" markdown>
 
-## Goals
+```py
+🐚$ python3
+Python 3.13.2 (main, Feb  4 2025, …
+Type "help", "copyright", "credits"…
+>>> some_bools = [1 + 1 == 2, 1 + 1 != 2]
+>>> print("[%s]" % ", ".join([str(x) for x in some_bools]))
+[True, False]
+```
 
-Temper needs **libraries of common algorithms**. Specialist library authors should be able to write generic functions that many generalists can use to support their own efforts. Not every Temper user will need to write generic functions, but most will need to use them.
+```sh
+🐚$ perl -e '@some_bools = (1 + 1 == 2, 1 + 1 != 2)' \
+>        -e 'print("[" . join(", ", @some_bools) . "]\n")'
+[1, ]
+```
 
-Parts of generic functions need to **specialize behavior** based on type bindings.  *leastElementOf\<String\>* should internally be able to compare based on string order, differently from *leastElementOf\<Int\>*. Ideally the generalist would not have to specify *String* vs *Int* comparison; type inference should handle that in the common case.
+```js
+🐚$ node
+Welcome to Node.js v23.11.0.
+Type ".help" for more information.
+> let someBools = [1 + 1 === 2, 1 + 1 !== 2];
+undefined
+> console.log(`[${someBools.join(", ")}]`)
+[true, false]
+```
 
-Temper needs the **flexibility to connect** multiple Temper types to the same target language type. When translating to a language that does not often distinguish between strings and numbers, Temper code should not conflate string operations and numeric operations.
+</div>
 
-Temper needs to **provide generic libraries to other languages**. A Java developer, for example, using the Java translation of a Temper library should be able to call a generic Temper function with a Java type that Temper has never heard of.
+## Why Generics Matter?
 
-## Runtime type information
+Generics functions are important tools in library authors' tool kits, but there's a more basic reason for paying attention to generics in Temper.
 
-In typed languages the compiler has type information, but even dynamic languages often have type infromation.
+Generic operations, like stringifying a list of booleans above, are bedrocks for well tested code.  They're essential to programmers' testing and debugging flow.
+
+Unit tests often bundle and compare results using **generic** collections.
+Unit tests can be **readable and expressive** by using strings that consistently and unambiguously describe the expected output.
+
+```ts
+assert(
+  functionThatReturnsListOfBooleans(...) == "[true, false]"
+);
+```
+
+Debugging and logging code **converts arbitrary types** to a standard form.
+When that conversion is consistent, the developer has to do less cognitive work to model the system and is led down fewer false trails.
+
+```ts
+console.log(
+  "Got %s",
+  myListOfBooleans
+);
+```
+
+Temper aims to help developers write high-quality, well tested libraries.
+Programmers debugging a library translated into many languages should be able to write unit tests and insert debugging statements as they would in every other language they work in.
+
+Without semantically consistent generic operations, developers will suffer a steeper learning curve when testing and debugging Temper code, and the same debugging effort will yield less improvement.
+
+## A Sample Generic Function: Least Value Of
+
+For the rest of this article, let's consider a function that's a bit more complex than list stringifying but is simpler than a full sorting algorithm.
+
+Below is some pseudo code for a function, *leastValueOf*, that takes a list of some type, *T*, and returns the least element.
+It also takes a *fallback* value which it returns when the list is empty.
+Unless specified otherwise it compares values using *T*'s natural order.
+
+```js
+leastValueOf①(elements, fallback, ②):
+  if elements is empty:
+    return fallback
+
+  // Handled the no-element-0 case above.
+  let leastSoFar = elements[0]
+
+  // Loop over the elements afer 0 comparing each once.
+  for i in [1, len(elements)):
+    let elementᵢ = elements[i]
+    if leastSoFar > elementᵢ③:
+      leastSoFar = elementᵢ
+
+  // leastSoFar has been compared to every element in elements, so
+  // assuming the ordering is transitive, leastSoFar is the least
+  // among elements.
+  return leastSoFar
+```
+
+The circled numbers shows that this pseudocode glosses over some important details:
+
+1. Typed language will often require some kind of type parameter declaration, like `<T>` possibly with type bounds that show that `T`s can be compared to each other.
+2. We talked about taking an order as a parameter when natural order is not desired.  What if you want the least string in a case-insensitive comparison?  Different languages support that in different ways.
+3. The `>` performs some *type-specific* comparison.
+
+The next few sections will look at common features of programming languages and how they might be used to implement this function and the pros and cons of trying to translate generic functions using those features.
+
+Afterwards, this article details Temper's goals for type genericity, outlines the approach Temper uses and gives examples of how this will translate in languages that are representative of the groups discussed.
+
+
+## Runtime type information (RTTI)
+
+In typed languages the compiler has access to type information, but even dynamic languages often have type information.
 
 Runtime type information (RTTI) is available when a language provides operators that distinguish between types of values as the program is running.
 
@@ -238,9 +299,49 @@ True
 
 </div>
 
-Maybe generic functions could get important context by looking at the "type" of an input when the function is called.
+We could implement our generic function in JavaScript/TypeScript as below, using RTTI checks to pick a default comparison function when none is specified.
 
-Even Perl has types[^perldata]:
+```ts
+export function leastValueOf<T>(
+  elements: Array<T>, fallback: T,
+  compare: (a: T, b: T) => (-1 | 0 | 1) = pickComparisonFnFor(fallback)
+):
+  if (!elements.length) {
+    return fallback;
+  }
+
+  let [leastSoFar, ...rest] = elements;
+
+  for (let element of rest) {
+    if (compare(leastSoFar, element) > 0) {
+      leastSoFar = element;
+    }
+  }
+
+  return leastSoFar;
+}
+
+function pickComparisonFnFor<T>(x: T): (a: T, b: T) => (-1 | 0 | 1) {
+  if (typeof x === 'object' || typeof x === 'function') {
+    // A referency type.
+    // Try using .compareTo method.
+    return (a: T, b: T) => {
+      if (a === n) { return 0; }
+      if (!a) { return -1; } // Sort null early
+      if (!b) { return 1; }
+      let delta = +(a?.compareTo(b) ?? 0);
+      return !delta ? 0 : Math.sign(delta);
+    };
+  }
+  return ((a, b) =>
+    (a === b) ?  0 :
+    (a <   b) ? -1 : 1);
+}
+```
+
+This code is dodgy, but it demonstrates that if you have an instance, in languages with RTTI you can sometimes pick a strategy as the program is running.
+
+How widespread is RTTI? Perl5 has types[^perldata]:
 
 > Perl has three built-in data types: scalars, arrays of scalars, and associative arrays of scalars, known as "hashes". A scalar is a single string (of any size, limited only by the available memory), number, or a reference to something
 
@@ -250,16 +351,80 @@ Oops. Perl has one *scalar* type which is used to represent strings, integers, f
 
 Perl and PHP both have added [experimental functions](https://perldoc.perl.org/builtin#created_as_number) like *is_bool* that report approximate runtime type information. When used carefully, they allow libraries to do generic conversion of records to JSON, for example emitting JSON `false` instead of `0` depending on whether the scalar came from a logical operator like `!` or `||`. The Temper designers want to avoid reliance on brittle RTTI because it imposes a recurring tax on library users to write code in an unnatural way.
 
-RTTI is not sufficient, even among dynamic languages, to let Temper meet its goal of specializing behaviour based on actual type parameter bindings.
+JavaScript distinguishes between strings and numbers but not between small integers and floating point numbers.
 
-- RTTI may be slow to access.
-- RTTI is not available when there are no inputs of that type.  How for example, could a function using RTTI determine the zero value for a type given an empty list.
-- RTTI is often partial. RTTI might identify an array as an array, but in not a list of anything in particular.
+RTTI is not sufficient, even among widely used dynamic languages, to let Temper meet its goal of specializing behaviour based on actual type parameter bindings.
+
+- RTTI is not available when there are no inputs of that type.  How for example, could a function using RTTI determine a type's *distinguished zero value* given an empty list.
 - RTTI often conflates related types: Besides Perl 5's scalar, JavaScript's `number` type does not distinguish between integers and floating point numbers.
 
 ## Monomorphization
 
+Monomorphization means "one-shaping."  In monomorphizing languages, you can define a generic function, but then the language makes sure that each function call is to a function that only deals with one shape of input.  Typically this is by creating, under the hood, a copy[^rust-mono] of the generic function where type-specific operations are specialized for the actual type.  Rust traits and C++ templates are monomorphized.
+
+```rust
+fn leastValueOf<T>(elements: Vec<T>, fallback: T) -> T
+where T: Ord + Copy,
+{
+    if elements.is_empty() {
+        return fallback;
+    }
+
+    let mut leastSoFar = elements[0];
+    for &element in &elements[1..] {
+        if element < leastSoFar {
+            leastSoFar = element;
+        }
+    }
+
+    leastSoFar
+}
+```
+
+The `<` operation in the Rust code is rewritten, by the monomorphizer to be expressed in terms of `<T>`'s *impl*ementation of *Ord.cmp*.  So if you used *leastValueOf* with a concrete struct *MyStruct* it might be calling into a specialized copy as if you had written this:
+
+```rust
+fn leastValueOf<MyStruct>(elements: Vec<MyStruct>, fallback: MyStruct) -> MyStruct
+{
+    if elements.is_empty() {
+        return fallback;
+    }
+
+    let mut leastSoFar = elements[0];
+    for &element in &elements[1..] {
+        if MyStruct::cmp(element, leastSoFar) == Ordering::Less {
+            leastSoFar = element;
+        }
+    }
+
+    leastSoFar
+}
+```
+
+When monomorphization happens is highly implementation dependent, but it requires one of two things: **whole program analysis** or **tight integration of the monomorphizer with the runtime**.
+
+Whole program analysis lets the language define all needed parameterizations ahead of time.  For example, if the only calls to *leastValueOf* are *leastValueOf\<String\>(&hellip;)* and *leastValueOf\<Int\>(&hellip;)* then the compiler can generate those two variants and link the calls to them.
+
+Unfortunately, Temper is a language for libraries, not whole programs. Temper never has access to the whole program.  The Temper compiler can't generate monomorphized variants of generic functions for code written in other languages which use libraries translated from Temper as it never sees them. Also, this variety of monomorphization tends to increase code size which is terrible for languages like JavaScript which ship source code to the browser.
+
+Tight runtime integration involves running the monomorphizer when a previously uncompiled parameterization is found. The Julia language takes a just-in-time compiler[^julia-ORCv2] approach to monomorphization[^julia-code-caching].
+
+Unfortunately, Temper is a language that needs to produce translations that load into any runtime.  Temper has no control over the runtime, because it has no runtime.  We can't expect other languages' runtimes to support dynamic code loading much less embed the Temper compiler. Even if we could, doing so would conflict with our goal to support runtimes that use [non-executable stacks](https://en.wikipedia.org/wiki/Executable-space_protection) as a protective measure against buffer overflows.
+
+[^rust-mono]: [Rust Compiler Development Guide &sect; Monomorphization](https://rustc-dev-guide.rust-lang.org/backend/monomorph.html) explains monomorphization thus: compiler stamps out a different copy of the code of a generic function for each concrete type needed.
+
+[^julia-ORCv2]: The [Julia JIT](https://docs.julialang.org/en/v1/devdocs/jit/) allows pausing function calls to specialize a function, invoke the compiler, and load code before resuming.
+
+[^julia-code-caching]: "[Julia's latency: Past, present and future](https://viralinstruction.com/posts/latency/index.html#a_brief_primer_of_julia_code_caching)" talks about monomorphization as a way to balance performance with Julia's design goals: interactive use by a programmer prevents whole program analysis but for performance they need devirtualization.
+
+There are definite use cases for monomorphization, and Temper may one day support explicit, coarse-grained, ahead-of-time monomorphization based on a mechanism like OCaml's parameterized modules. But it is the wrong tool for translating generic function definitions to other programming languages.
+
+## Virtual Method Calls
+
+In Java, our *leastValueOf* function could delegate the generic operation to an abstract method.
+
 TODO
+
 
 
 ## Java brittleness
@@ -334,3 +499,54 @@ This is code in Temper that doesn't currently work. We're implementing parts of 
 - The function takes three inputs and the last one, `cmp` doesn't have a type but it says it *reifies* the type parameter `T`.
 - That input, `cmp`, is used to compare values of type `T` obtained from the list.
 - In the unit test at the bottom, no value is explicitly passed for `cmp`.
+
+
+
+## Goals
+
+Temper needs **libraries of common algorithms**. Specialist library authors should be able to write generic functions that many generalists can use to support their own efforts. Not every Temper user will need to write generic functions, but most will need to use them.
+
+Parts of generic functions need to **specialize behavior** based on type bindings.  *leastElementOf\<String\>* should internally be able to compare based on string order, differently from *leastElementOf\<Int\>*. Ideally the generalist would not have to specify *String* vs *Int* comparison; type inference should handle that in the common case.
+
+Temper needs the **flexibility to connect** multiple Temper types to the same target language type. When translating to a language that does not often distinguish between strings and numbers, Temper code should not conflate string operations and numeric operations.
+
+Temper needs to **provide generic libraries to other languages**. A Java developer, for example, using the Java translation of a Temper library should be able to call a generic Temper function with a Java type that Temper has never heard of.
+
+
+In Java our function might look like the below:
+
+```java
+public static <T>
+T leastValueOf(
+  Iterable<T> elements,
+  T fallback,
+  Comparator<T> comparator
+) {
+  Iterator<T> it = elements.iterator();
+  // Use fallback if there's nothing
+  if (!it.hasNext()) {
+    return fallback;
+  }
+  T leastSoFar = it.next();
+  // Loop over the elements after the first swapping
+  // them if leastSoFar is strictly greater according to
+  // comparator.
+  while (it.hasNext()) {
+    T candidate = it.next();
+    if (comparator.compare(leastSoFar, candidate) > 0) {
+      leastSoFar = candidate;
+    }
+  }
+  // We've considered all elements so leastSoFar is the least
+  // assuming comparator is transitive.
+  return leastSoFar;
+}
+
+public static <T extends Comparable<? super T>>
+T leastValueOf(
+  Iterable<T> elements,
+  T fallback
+) {
+  return leastValueOf(elements, fallback, Comparator.<T>naturalOrder());
+}
+```
