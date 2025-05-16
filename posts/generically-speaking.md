@@ -404,11 +404,11 @@ fn leastValueOf<MyStruct>(elements: Vec<MyStruct>, fallback: MyStruct) -> MyStru
 }
 ```
 
-When monomorphization happens is highly implementation dependent, but it requires one of these things:
+When and how monomorphization happens is highly implementation dependent, but it requires one of these things:
 
 - **whole program analysis**, like Rust, so that the compiler can monomorphize all generic calls ahead of time, or
 - **tight integration of the monomorphizer with the runtime**, like Julia, so that as generic calls are loaded or run, they can be monomorphized, or
-- **a small, sufficient set of type actuals**, like C#[^csharp-partial-monomorphs], so that the compiler can generate enough monomoprhizations ahead of time to satisfy all generic calls.
+- **a small, sufficient set of type actuals**, like C#[^csharp-partial-monomorphs], so that the compiler can generate enough monomoprhizations to satisfy calls with any possible actual type parameters.
 
 Whole program analysis lets the language define all needed parameterizations ahead of time.  For example, if the only calls to *leastValueOf* are *leastValueOf\<String\>(&hellip;)* and *leastValueOf\<Int\>(&hellip;)* then the compiler can generate those two variants and link the calls to them.
 
