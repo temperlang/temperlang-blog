@@ -764,6 +764,11 @@ Inside Temper, we can add additional arguments to calls.  If a call to a generic
 
 Outside Temper, backends may generate default expressions for formal arguments with *supports* clauses or use overloading to achieve the same.
 
+This generics scheme has a few unintended, nice properties:
+
+- One can pass a different *Comparison* into *leastElementOf*.  For example, you can define a generic *reverseComparison* function that wraps a *Comparison* and negates its result, and pass that in.
+- A Temper backend author can connect the *interface Comparison*.  For example, the Temper *Comparison\<T\>* could connect directly to *java.util.Comparator\<T\>* in the Java backend separately from any of the types that support comparison.
+
 ## Summary and Conclusions
 
 Generic functions embed type-dependent operations within a type-agnostic algorithmic framework.  The need to connect those dependent bits makes them a source of significant complexity in language design.
