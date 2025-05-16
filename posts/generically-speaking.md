@@ -1,5 +1,5 @@
 ---
-date: 2025-03-25
+date: 2025-05-15
 authors:
   - mikesamuel
 draft: true
@@ -39,7 +39,7 @@ undefined
 
 That array! *Quel désarroi?!*
 
-Temper aims to translate well to all the other programming languages. To do that, we need to impose some order on generic operations like&mdash;well&mdash;ordering. The more generic the code, the more important context is. Join us as we look at languages' differing approaches to genericity and find some novel tweaks that let us translate generic functions well to many many languages.
+Temper aims to translate well to all the other programming languages. To do that, we need to impose some order on generic operations like&mdash;well&mdash;ordering. The more generic the code, the more important context is. Join us as we look at languages' differing approaches to genericity and find some language design tricks that let us translate generic functions well to many many languages.
 
 <!-- more -->
 
@@ -199,16 +199,17 @@ Generics functions are important tools in library authors' tool kits, but there'
 Generic operations, like stringifying a list of booleans above, are bedrocks for well tested code.  They're essential to programmers' testing and debugging flow.
 
 Unit tests often bundle and compare results using **generic** collections.
-Unit tests can be **readable and expressive** by using strings that consistently and unambiguously describe the expected output.
+Developers often write test assertions using strings; they rely on stable, unambiguous string conversion to craft readable, maintainable tests.
 
 ```ts
 assert(
-  functionThatReturnsListOfBooleans(...) == "[true, false]"
+  "[true, false]" ==
+  `${ functionThatReturnsListOfBooleans(...) }`
 );
 ```
 
 Debugging and logging code **converts arbitrary types** to a standard form.
-When that conversion is consistent, the developer has to do less cognitive work to model the system and is led down fewer false trails.
+When that conversion is consistent, the developer has to do less cognitive work to understand what's going on and is led down fewer false trails.
 
 ```ts
 console.log(
@@ -256,9 +257,11 @@ The circled numbers shows that this pseudocode glosses over some important detai
 2. We talked about taking an order as a parameter when natural order is not desired.  What if you want the least string in a case-insensitive comparison?  Different languages support that in different ways.
 3. The `>` performs some *type-specific* comparison.
 
-The next few sections will look at common features of programming languages and how they might be used to implement this function and the pros and cons of trying to translate generic functions using those features.
+The next few sections will look at common features[^models-of-generics] of programming languages and how they might be used to implement this function and the pros and cons of trying to translate generic functions using those features.
 
 Afterwards, this article details Temper's goals for type genericity, outlines the approach Temper uses and gives examples of how this will translate in languages that are representative of the groups discussed.
+
+[^models-of-generics]: "[Models of Generics and Metaprogramming: Go, Rust, Swift, D and More]"(https://thume.ca/2019/07/14/a-tour-of-metaprogramming-models-for-generics/)
 
 
 ## Runtime type information (RTTI)
@@ -401,7 +404,11 @@ fn leastValueOf<MyStruct>(elements: Vec<MyStruct>, fallback: MyStruct) -> MyStru
 }
 ```
 
-When monomorphization happens is highly implementation dependent, but it requires one of two things: **whole program analysis** or **tight integration of the monomorphizer with the runtime**.
+When monomorphization happens is highly implementation dependent, but it requires one of these things:
+
+- **whole program analysis**, like Rust, so that the compiler can monomorphize all generic calls ahead of time, or
+- **tight integration of the monomorphizer with the runtime**, like Julia, so that as generic calls are loaded or run, they can be monomorphized, or
+- **a small, sufficient set of type actuals**, like C#[^csharp-partial-monomorphs], so that the compiler can generate enough monomoprhizations ahead of time to satisfy all generic calls.
 
 Whole program analysis lets the language define all needed parameterizations ahead of time.  For example, if the only calls to *leastValueOf* are *leastValueOf\<String\>(&hellip;)* and *leastValueOf\<Int\>(&hellip;)* then the compiler can generate those two variants and link the calls to them.
 
@@ -411,51 +418,239 @@ Tight runtime integration involves running the monomorphizer when a previously u
 
 Unfortunately, Temper is a language that needs to produce translations that load into any runtime.  Temper has no control over the runtime, because it has no runtime.  We can't expect other languages' runtimes to support dynamic code loading much less embed the Temper compiler. Even if we could, doing so would conflict with our goal to support runtimes that use [non-executable stacks](https://en.wikipedia.org/wiki/Executable-space_protection) as a protective measure against buffer overflows.
 
+C# generates monomorphizations for value types and then one extra monomorphization for all reference types. This lets it use a *bool\[\]* array under the hood for its *ArrayList\<bool\>*, but for all reference types like *ArrayList\<MyClass\>* it uses a pointer array.  C# does not need to [box](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/types/boxing-and-unboxing) every primitive value stored in a generic collection.
+
+Unfortunately, C# style monomorphization won't work for Temper.  Temper needs to be able to connect multiple types to the same underlying type, for example a third party Temper library might have a *Date* and *DateTime* type that both connect to some language's *Timestamp* type but the stringification and equality of the two still needs to preserve that distinction.  There is no exhaustive set of monomorphizations that would preserve Temper semantics given third-party, ambiguous connections.
+
+There are definite use cases for monomorphization, and Temper may one day support explicit, coarse-grained, ahead-of-time monomorphization based on a mechanism like OCaml's parameterized modules. But it is the wrong tool for translating generic function definitions to other programming languages.
+
+[^csharp-partial-monomorphs]: [](https://blog.stephencleary.com/2022/10/modern-csharp-techniques-3-generic-code-generation.html#generics-and-value-types) notes "C# generics do *not* undergo monomorphization for reference types; there’s only one copy of the type/method implementation that is shared between all reference types. However, C# generics *do* undergo monomorphization for value types!"
+
 [^rust-mono]: [Rust Compiler Development Guide &sect; Monomorphization](https://rustc-dev-guide.rust-lang.org/backend/monomorph.html) explains monomorphization thus: compiler stamps out a different copy of the code of a generic function for each concrete type needed.
 
 [^julia-ORCv2]: The [Julia JIT](https://docs.julialang.org/en/v1/devdocs/jit/) allows pausing function calls to specialize a function, invoke the compiler, and load code before resuming.
 
 [^julia-code-caching]: "[Julia's latency: Past, present and future](https://viralinstruction.com/posts/latency/index.html#a_brief_primer_of_julia_code_caching)" talks about monomorphization as a way to balance performance with Julia's design goals: interactive use by a programmer prevents whole program analysis but for performance they need devirtualization.
 
-There are definite use cases for monomorphization, and Temper may one day support explicit, coarse-grained, ahead-of-time monomorphization based on a mechanism like OCaml's parameterized modules. But it is the wrong tool for translating generic function definitions to other programming languages.
-
 ## Virtual Method Calls
 
 In Java, our *leastValueOf* function could delegate the generic operation to an abstract method.
 
-TODO
+```java
+public static <T>
+T leastValueOf(
+  Iterable<T> elements,
+  T fallback,
+  Comparator<T> comparator
+) {
+  Iterator<T> it = elements.iterator();
+  if (!it.hasNext()) {
+    return fallback;
+  }
 
+  T leastSoFar = it.next();
+  while (it.hasNext()) {
+    T candidate = it.next();
+    if (/*⚠️*/comparator.compare(leastSoFar, candidate) > 0/*⚠️*/) {
+      leastSoFar = candidate;
+    }
+  }
 
+  return leastSoFar;
+}
 
-## Java brittleness
+public static <T extends Comparable<? super T>>
+T leastValueOf(
+  Iterable<T> elements,
+  T fallback
+) {
+  return leastValueOf(elements, fallback, Comparator.<T>naturalOrder());
+}
+```
 
-Even typed languages have some brittleness around. Java's numeric primitives don't always behave the same as their boxed equivalents[^java-Double-compareTo-caveat].
+Java provides a *Comparable* type and a *Comparator*.  The first method uses a *Comparator* to express how to compare two values of a specific type.  The second method, an overload of the first, defaults to the natural order when *\<T\>* is a type that knows how to compare `this` to another value of the same type or a supertype.
+
+When the *comparator.compare* is called, the actual method implementation might need to be looked up in a virtual method table (vtable).
+Unlike monomorphization, this isn't done once by rewriting code.  It might happen every time the method is called.
+
+Java has an abstract super-type, *java.lang.Object*, for all reference types which defines some generic operations:
+
+- *.equals(Object)* and *.hashCode()* which define equivalence relations
+- *.toString()* which defines a natural or debugging string form
+
+Unfortunately, Temper needs to be careful about super-types.  Can we rely on types having equivalent super-types?  Let's look at some languages' type hierarchies just for numeric, string, and boolean types.
+
+<div class="grid" markdown>
+
+```mermaid
+classDiagram
+  note "Java Boxed Primitives"
+  Object --|> Comparable
+  Object --|> CharSequence
+  Object --|> Number
+  Number --|> Integer
+  Number --|> Double
+  Comparable --|> Integer
+  Comparable --|> Double
+  Comparable --|> Boolean
+  Comparable --|> String
+  CharSequence --|> String
+```
+
+```mermaid
+classDiagram
+  note "JavaScript Prototypes"
+  Object --|> String
+  Object --|> Boolean
+  Object --|> Number
+```
+
+```mermaid
+classDiagram
+  note "Python3 \_\_mro\_\_"
+  object --|> int
+  int --|> bool
+  object --|> str
+  object --|> float
+```
+
+```mermaid
+classDiagram
+  note "Ruby .class, .superclass"
+  Object --|> FalseClass
+  Object --|> TrueClass
+  Object --|> Numeric
+  Object --|> String
+  Numeric --|> Integer
+  Numeric --|> Float
+```
+
+</div>
+
+Even among these few languages, there is a wide divergence in the type hierarchy.
+
+- JavaScript has no dedicated float type
+- In Python, *bool* is a subtype of *int*
+- Ruby doesn't have just one boolean class, it has two, and neither is comparable via `<` to the other.
+
+Some languages, C++ for example, have no type hierarchy for these types.
+
+Temper cannot assume that there is an abstract type that provides a method for *comparison* or *equivalence* or some other generic operation.
+
+## Boxing
+
+A value can be thought of as:
+
+- a type and
+- some pointers and/or
+- some non-pointer bits
+
+Compilers and runtimes often carefully arrange program operations so that they can erase the type part.
+
+Boxing is the act of combining a value representation that doesn't carry type info with type info.  It's often done in languages that have a distinction between classes and primitives; by providing classes corresponding to primitives, e.g. *java.lang.Integer* for *int*, you can use primitives where only class instances are allowed.
+
+Boxed types and unboxed types can have divergent behavior though because sometimes operators are overloaded differently for boxed and unboxed values.  For example, in Java, `==` checks value-equality for *int*s but means reference-equality for the corresponding box type.
+
+Normally, you'd use `.equals` to check equality for references, but Java again has different semantics: `.equals` for (capital-D) *Double* obeys an equivalence relationship[^java-Double-compareTo-caveat], but `==` for (lowercase-d) *double* performs IEEE-754 comparison which treats signed zeroes as equivalent.
 
 [^java-Double-compareTo-caveat]: Java's comparison operators perform NaN poisoning comparison, but the [*Double.compareTo*](https://docs.oracle.com/javase/8/docs/api/java/lang/Double.html#compareTo-java.lang.Double-) method implements a valid ordering predicate.  See "There are two ways in which comparisons performed by this method differ from those performed by the Java language numerical comparison operators &hellip;"
+
+<div class="grid" markdown>
 
 ```java
 🐚$ jshell
 |  Welcome to JShell -- Version 21.0.4
 |  For an introduction type: /help intro
 
-jshell> double a = Double.NaN, b = 1.0D;
-a ==> NaN
-b ==> 1.0
+jshell> int i = Integer.MAX_VALUE, j = Integer.MAX_VALUE;
+i ==> 2147483647
+j ==> 2147483647
 
-jshell> Double A = a, B = b;
-A ==> NaN
-B ==> 1.0
+jshell> Integer I = i, J = j;
+I ==> 2147483647
+J ==> 2147483647
 
-jshell> a > b
-$5 ==> false
+jshell> i == j
+$5 ==> true
 
-jshell> A.compareTo(B) > 0
-$6 ==> true
+jshell> I == J
+$6 ==> false
 ```
 
+```java
+🐚$ jshell
+|  Welcome to JShell -- Version 21.0.4
+|  For an introduction type: /help intro
 
+jshell> double n = -0.0, p = 0.0;
+n ==> -0.0
+p ==> 0.0
 
-## Implementing leastValueOf
+jshell> Double N = n, P = p;
+N ==> -0.0
+P ==> 0.0
+
+jshell> n == p
+$5 ==> true
+
+jshell> N.equals(P)
+$6 ==> false
+```
+
+</div>
+
+If Temper's Java translation exposed boxed numbers to Java code calling into Temper libraries, then idioms like the above would trip up programmers: boxes are not idiomatic.
+
+Temper could use boxes to create important distinctions: Temper could create a JavaScript *Integer* box to work around JavaScript's lack of a float/int distinction.  Again, such an approach, unless hidden from hand-written JavaScript, would run into the same overload problem.  And there's no way to have boxes when you need them and hide them from code; as soon as a box needs to be stored in a struct property or added to a list, it's potentially exposed to hand-written code.  If Temper boxed part of the world it would have to box the whole world.
+
+```js
+🐚$ node
+Welcome to Node.js v23.11.0.
+Type ".help" for more information.
+> let i = 0, j = 0;
+undefined
+> let I = new Number(i), J = new Number(j);
+undefined
+> i == j
+true
+> I == J
+false
+```
+
+Boxes are often heap allocated instead of stack allocated, so they come with performance penalties. Boxing and unboxing has a prehibitive performance penalty in tight numeric processing loops.
+
+Boxing can solve very specific language design problems when considered carefully in the context of one language, but cannot be foisted onto languages as part of a broadly effective translation strategy.
+
+## Goals
+
+We alluded to requirements above when discussing approaches to generics that have worked for other languages. But to clarify the motivation:
+
+Temper needs **consistent behaviour for collections types**.  Inconsistent behaviour, especially in test code, would provide a significant barrier to writing well-tested, reliable libraries in Temper.
+
+Temper needs **libraries of common algorithms**. Specialist library authors should be able to write generic functions that many generalists can use to support their own efforts. Not every Temper user will need to write generic functions, but most will need to use them.
+
+Parts of generic functions need to **specialize behavior** based on type bindings.  *leastElementOf\<String\>* should internally be able to compare based on string order, differently from *leastElementOf\<Int\>*. Ideally the generalist would not have to specify *String* vs *Int* comparison; type inference should handle that in the common case.
+
+Temper needs the **flexibility to connect** multiple Temper types to the same target language type. When translating to a language that does not often distinguish between strings and numbers, Temper code should not conflate string operations and numeric operations.
+
+Temper needs to **provide generic libraries to other languages**. A Java developer, for example, using the Java translation of a Temper library should be able to call a generic Temper function with a Java type that Temper has never heard of.
+
+Temper needs to impose **a low-burden on translator writers**.  A Java language expert should be able to write and maintain a translator from Temper's intermediate representation to Java code without having to simoultaneously thread multiple type-hierarchy-constraint needles.
+
+## Implementing leastValueOf in Temper
+
+For Temper, we're taking a different approach than the ones above, but
+not one that is entirely without precedent: *reifying type-associated behaviours*[^ceylon-reifies].
+
+[^ceylon-reifies]: [The Ceylon Language &sect; 1.2 Type system](https://web.mit.edu/ceylon_v1.3.3/ceylon-1.3.3/doc/en/spec/html_single/#thetypesystem) notes "Ceylon's type system is fully reified. In particular, generic type arguments are reified"
+
+It can be translated to any language for which we can translate regular classes and interfaces.
+
+(Some readers may be surprised that we consider classes and interfaces a low bar for translation.  This would seem to conflict with translation to important [single-inheritance](https://en.wikipedia.org/wiki/Multiple_inheritance#Single_inheritance) languages like JavaScript and Ruby. It turns out that widely used single-inheritance languages also turn out to support tricks [^Symbol.hasInstance] enabling as-if multiple-inheritance)
+
+[^Symbol.hasInstance]: JavaScript allows [specializing `instanceof`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/hasInstance) so though it is hard to do multiple inheritance in user code, it is not difficult to provide ergonomic multiple inheritance from generated code.
+
+[^rb-is-a-override]: Ruby allows [overriding the *is\_a\?* message](https://stackoverflow.com/q/4894613/20394).
 
 ```temper
 /**
@@ -463,23 +658,23 @@ $6 ==> true
  * All comparisons are according to *cmp*.
  */
 let leastElementOf<T supports Comparison<T>>(
-  list: List<T>,
+  elements: List<T>,
   fallback: T,
-  cmp reifies T,
+  cmp supports T,
 ): T {
   let n = list.length;
   if (n == 0) { return fallback }
 
-  var min = list[0];
+  var minSoFar = list[0];
 
   for (var i = 1; i < n; ++i) {
-    let candidate = list[i];
-    if (cmp.compare(min, candidate) < 0) {
-      min = candidate;
+    let element = list[i];
+    if (cmp.compare(minSoFar, element) > 0) {
+      minSoFar = candidate;
     }
   }
 
-  min
+  minSoFar
 }
 
 // We should be able to apply leastElementOf to lists of
@@ -496,57 +691,87 @@ This is code in Temper that doesn't currently work. We're implementing parts of 
 
 - `leastElementOf` is a generic function; it declares a type parameter `<T>` using a syntax familiar to C++, C#, Rust, and TypeScript developers
 - That type parameter has an upper type bound, `Comparison<T>`, declared with an unfamiliar keyword: `supports`
-- The function takes three inputs and the last one, `cmp` doesn't have a type but it says it *reifies* the type parameter `T`.
-- That input, `cmp`, is used to compare values of type `T` obtained from the list.
+- The function takes three inputs and the last one, `cmp` doesn't have a type but it says it *supports* the type parameter `T`.
+- That input, `cmp`, is used to compare values of type `T` obtained from the list by calling `cmp.compare`.
 - In the unit test at the bottom, no value is explicitly passed for `cmp`.
 
+Let's look at how this is going to fit into Temper's pre-translation compilation pipeline.
 
+First, Temper defines some builtins.  *Comparison* just explains how to compare two values of a particular type.  It's the upper bound for *leastValueOf*'s type parameter.  It's also the type of the *cmp* input.
 
-## Goals
-
-Temper needs **libraries of common algorithms**. Specialist library authors should be able to write generic functions that many generalists can use to support their own efforts. Not every Temper user will need to write generic functions, but most will need to use them.
-
-Parts of generic functions need to **specialize behavior** based on type bindings.  *leastElementOf\<String\>* should internally be able to compare based on string order, differently from *leastElementOf\<Int\>*. Ideally the generalist would not have to specify *String* vs *Int* comparison; type inference should handle that in the common case.
-
-Temper needs the **flexibility to connect** multiple Temper types to the same target language type. When translating to a language that does not often distinguish between strings and numbers, Temper code should not conflate string operations and numeric operations.
-
-Temper needs to **provide generic libraries to other languages**. A Java developer, for example, using the Java translation of a Temper library should be able to call a generic Temper function with a Java type that Temper has never heard of.
-
-
-In Java our function might look like the below:
-
-```java
-public static <T>
-T leastValueOf(
-  Iterable<T> elements,
-  T fallback,
-  Comparator<T> comparator
-) {
-  Iterator<T> it = elements.iterator();
-  // Use fallback if there's nothing
-  if (!it.hasNext()) {
-    return fallback;
-  }
-  T leastSoFar = it.next();
-  // Loop over the elements after the first swapping
-  // them if leastSoFar is strictly greater according to
-  // comparator.
-  while (it.hasNext()) {
-    T candidate = it.next();
-    if (comparator.compare(leastSoFar, candidate) > 0) {
-      leastSoFar = candidate;
-    }
-  }
-  // We've considered all elements so leastSoFar is the least
-  // assuming comparator is transitive.
-  return leastSoFar;
-}
-
-public static <T extends Comparable<? super T>>
-T leastValueOf(
-  Iterable<T> elements,
-  T fallback
-) {
-  return leastValueOf(elements, fallback, Comparator.<T>naturalOrder());
+```temper
+export interface Comparison<T> {
+  compare(a: T, b: T): Int;
 }
 ```
+
+Some of our basic types need to support comparison.  That involves a clause `supports Comparison<...>` that can occur alongside any `extends ...` clause but which does not imply a subtype relationship.
+
+The `supports` clause says that, for each abstract method in the supported interface, the type must have a compatible static method.
+
+We add code to the types that need to support comparison.
+
+```patch
+ export class String
++supports Comparison<String>
+ {
++  public static compare(a: String, b: String): Int { ... }
+
+   ...
+ }
+
+ export class Int
++supports Comparison<Int>
+ {
++  public static compare(a: Int, b: Int): Int { ... }
+
+   ...
+ }
+```
+
+The Temper compiler will then generate subtypes of *Comparison* based on *supports* clauses.
+
+```patch
++// Generated code
++
++class StringSupport extends Comparison<String> {
++  public compare(a: String, b: String): Int {
++    String.compare(a, b)
++  }
++}
+
+ export class String
+ supports Comparison<String> {
++  @supportFactory(Comparison<String>)
++  public static support(): Comparison<String> { new StringSupport() }
+ }
+```
+
+Moving the support for comparison onto a *StringSupport* class lets us avoid assuming anything about string type's vtables, and lets us avoid assuming that strings have methods.  This works around the problems with virtual methods above.
+
+Finally, what about calls to the generic methods:
+
+```patch
+ test("leastElementOf") {
+-  assert(leastElementOf<String>(["c", "a", "b"], "") == "a");
++  assert(leastElementOf<String>(["c", "a", "b"], "", String.support()) == "a");
+-  assert(leastElementOf<Int   >([  3,   1,   2],  0) ==   1);
++  assert(leastElementOf<Int   >([  3,   1,   2],  0, Int.support())    ==   1);
+ }
+```
+
+Inside Temper, we can add additional arguments to calls.  If a call to a generic method appears inside another method that *supports* a type parameter, we can auto-wire that through.  If it is called outside a generic context, we can use the actual type binding to derive an actual argument.
+
+Outside Temper, backends may generate default expressions for formal arguments with *supports* clauses or use overloading to achieve the same.
+
+## Summary and Conclusions
+
+Generic functions embed type-dependent operations within a type-agnostic algorithmic framework.  The need to connect those dependent bits makes them a source of significant complexity in language design.
+
+Temper has additional needs for genericity: consistent equality and stringification of collections is essential to developer workflow and the only path to semantic consistency goes through generics.
+
+Temper is also a language that needs to work on many diverse runtimes over which it has no control. This makes many approaches to genericity unavailable to Temper.
+
+Nevertheless, there is a light-weight reification approach that splits the difference: by embodying generic behaviour in auto-generated support classes, Temper avoids entangling the concrete Temper types that need to flexibly connect to pre-existing types in the languages to which Temper translates.  If a generic algorithm wants to require methods, it can declare a type parameter *extends* an upper bound, but if not, it can declare *supports* and get just enough reification.
+
+This meets Temper's goals of placing a low burden on target language experts who write translators, but still supporting Temper library authors in writing well tested, reliable libraries with consistent semantics.
