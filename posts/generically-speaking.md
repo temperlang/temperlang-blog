@@ -424,7 +424,7 @@ Unfortunately, C# style monomorphization won't work for Temper.  Temper needs to
 
 There are definite use cases for monomorphization, and Temper may one day support explicit, coarse-grained, ahead-of-time monomorphization based on a mechanism like OCaml's parameterized modules. But it is the wrong tool for translating generic function definitions to other programming languages.
 
-[^csharp-partial-monomorphs]: [](https://blog.stephencleary.com/2022/10/modern-csharp-techniques-3-generic-code-generation.html#generics-and-value-types) notes "C# generics do *not* undergo monomorphization for reference types; there’s only one copy of the type/method implementation that is shared between all reference types. However, C# generics *do* undergo monomorphization for value types!"
+[^csharp-partial-monomorphs]: [Modern C# Techniques, Part 3: Generic Code Generation](https://blog.stephencleary.com/2022/10/modern-csharp-techniques-3-generic-code-generation.html#generics-and-value-types) notes "C# generics do *not* undergo monomorphization for reference types; there’s only one copy of the type/method implementation that is shared between all reference types. However, C# generics *do* undergo monomorphization for value types!"
 
 [^rust-mono]: [Rust Compiler Development Guide &sect; Monomorphization](https://rustc-dev-guide.rust-lang.org/backend/monomorph.html) explains monomorphization thus: compiler stamps out a different copy of the code of a generic function for each concrete type needed.
 
