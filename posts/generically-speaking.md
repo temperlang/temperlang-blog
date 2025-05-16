@@ -711,7 +711,7 @@ The `supports` clause says that, for each abstract method in the supported inter
 
 We add code to the types that need to support comparison.
 
-```patch
+```diff
  export class String
 +supports Comparison<String>
  {
@@ -731,7 +731,7 @@ We add code to the types that need to support comparison.
 
 The Temper compiler will then generate subtypes of *Comparison* based on *supports* clauses.
 
-```patch
+```diff
 +// Generated code
 +
 +class StringSupport extends Comparison<String> {
@@ -751,7 +751,7 @@ Moving the support for comparison onto a *StringSupport* class lets us avoid ass
 
 Finally, what about calls to the generic methods:
 
-```patch
+```diff
  test("leastElementOf") {
 -  assert(leastElementOf<String>(["c", "a", "b"], "") == "a");
 +  assert(leastElementOf<String>(["c", "a", "b"], "", String.support()) == "a");
