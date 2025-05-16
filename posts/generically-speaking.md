@@ -410,7 +410,7 @@ When and how monomorphization happens is highly implementation dependent, but it
 - **tight integration of the monomorphizer with the runtime**, like Julia, so that as generic calls are loaded or run, they can be monomorphized, or
 - **a small, sufficient set of type actuals**, like C#[^csharp-partial-monomorphs], so that the compiler can generate enough monomoprhizations to satisfy calls with any possible actual type parameters.
 
-Whole program analysis lets the language define all needed parameterizations ahead of time.  For example, if the only calls to *leastValueOf* are *leastValueOf\<String\>(&hellip;)* and *leastValueOf\<Int\>(&hellip;)* then the compiler can generate those two variants and link the calls to them.
+Whole program analysis lets the language define all needed parameterizations ahead of time.  For example, if the only calls to *leastValueOf* are *leastValueOf&lt;String&gt;(&hellip;)* and *leastValueOf&lt;Int&gt;(&hellip;)* then the compiler can generate those two variants and link the calls to them.
 
 Unfortunately, Temper is a language for libraries, not whole programs. Temper never has access to the whole program.  The Temper compiler can't generate monomorphized variants of generic functions for code written in other languages which use libraries translated from Temper as it never sees them. Also, this variety of monomorphization tends to increase code size which is terrible for languages like JavaScript which ship source code to the browser.
 
@@ -418,7 +418,7 @@ Tight runtime integration involves running the monomorphizer when a previously u
 
 Unfortunately, Temper is a language that needs to produce translations that load into any runtime.  Temper has no control over the runtime, because it has no runtime.  We can't expect other languages' runtimes to support dynamic code loading much less embed the Temper compiler. Even if we could, doing so would conflict with our goal to support runtimes that use [non-executable stacks](https://en.wikipedia.org/wiki/Executable-space_protection) as a protective measure against buffer overflows.
 
-C# generates monomorphizations for value types and then one extra monomorphization for all reference types. This lets it use a *bool\[\]* array under the hood for its *ArrayList\<bool\>*, but for all reference types like *ArrayList\<MyClass\>* it uses a pointer array.  C# does not need to [box](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/types/boxing-and-unboxing) every primitive value stored in a generic collection.
+C# generates monomorphizations for value types and then one extra monomorphization for all reference types. This lets it use a *bool\[\]* array under the hood for its *ArrayList&lt;bool&gt;*, but for all reference types like *ArrayList&lt;MyClass&gt;* it uses a pointer array.  C# does not need to [box](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/types/boxing-and-unboxing) every primitive value stored in a generic collection.
 
 Unfortunately, C# style monomorphization won't work for Temper.  Temper needs to be able to connect multiple types to the same underlying type, for example a third party Temper library might have a *Date* and *DateTime* type that both connect to some language's *Timestamp* type but the stringification and equality of the two still needs to preserve that distinction.  There is no exhaustive set of monomorphizations that would preserve Temper semantics given third-party, ambiguous connections.
 
@@ -468,7 +468,7 @@ T leastValueOf(
 }
 ```
 
-Java provides a *Comparable* type and a *Comparator*.  The first method uses a *Comparator* to express how to compare two values of a specific type.  The second method, an overload of the first, defaults to the natural order when *\<T\>* is a type that knows how to compare `this` to another value of the same type or a supertype.
+Java provides a *Comparable* type and a *Comparator*.  The first method uses a *Comparator* to express how to compare two values of a specific type.  The second method, an overload of the first, defaults to the natural order when *&lt;T&gt;* is a type that knows how to compare `this` to another value of the same type or a supertype.
 
 When the *comparator.compare* is called, the actual method implementation might need to be looked up in a virtual method table (vtable).
 Unlike monomorphization, this isn't done once by rewriting code.  It might happen every time the method is called.
@@ -629,7 +629,7 @@ Temper needs **consistent behaviour for collections types**.  Inconsistent behav
 
 Temper needs **libraries of common algorithms**. Specialist library authors should be able to write generic functions that many generalists can use to support their own efforts. Not every Temper user will need to write generic functions, but most will need to use them.
 
-Parts of generic functions need to **specialize behavior** based on type bindings.  *leastElementOf\<String\>* should internally be able to compare based on string order, differently from *leastElementOf\<Int\>*. Ideally the generalist would not have to specify *String* vs *Int* comparison; type inference should handle that in the common case.
+Parts of generic functions need to **specialize behavior** based on type bindings.  *leastElementOf&lt;String&gt;* should internally be able to compare based on string order, differently from *leastElementOf&lt;Int&gt;*. Ideally the generalist would not have to specify *String* vs *Int* comparison; type inference should handle that in the common case.
 
 Temper needs the **flexibility to connect** multiple Temper types to the same target language type. When translating to a language that does not often distinguish between strings and numbers, Temper code should not conflate string operations and numeric operations.
 
@@ -767,7 +767,7 @@ Outside Temper, backends may generate default expressions for formal arguments w
 This generics scheme has a few unintended, nice properties:
 
 - One can pass a different *Comparison* into *leastElementOf*.  For example, you can define a generic *reverseComparison* function that wraps a *Comparison* and negates its result, and pass that in.
-- A Temper backend author can connect the *interface Comparison*.  For example, the Temper *Comparison\<T\>* could connect directly to *java.util.Comparator\<T\>* in the Java backend separately from any of the types that support comparison.
+- A Temper backend author can connect the *interface Comparison*.  For example, the Temper *Comparison&lt;T&gt;* could connect directly to *java.util.Comparator&lt;T&gt;* in the Java backend separately from any of the types that support comparison.
 
 ## Summary and Conclusions
 
