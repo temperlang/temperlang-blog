@@ -156,7 +156,7 @@ Programming language designers agree!! Everybody uses **lexicographic comparison
 
 Shush, COBOL.
 
-*Lexicographic ordering* simply means compare character by character.  The first pair of characters that differs determines the order.  If none differ, the shorter string is lesser.  As the Python reference noted above, lexicographic order can be generalized to any pair of sequences by comparing elements instead of characters.
+*Lexicographic ordering* simply means to compare character by character.  The first pair of characters that differs determines the order.  If none differ, the shorter string is lesser.  As the Python reference noted above, lexicographic order can be generalized to any pair of sequences by comparing elements instead of characters.
 
 'A' comes before 'B' in the alphabet so "" < "A" < "AA" < "AB" < "BA" < "BAA" < "BB".
 
@@ -237,8 +237,8 @@ Ugh, as shown in the [table above](#table-utfs), in Python it's 1 long, in JavaS
 The only thing programming language designers actually agree on is powers of two.
 
 What, notionally, is a string length?
-An immutable list's length is the number of items its iterator produces.
-But string length is more reliably related to indexing than to iteration.
+An immutable collection's length (or size) is the number of items its iterator produces, which, for indexed collections like lists happens to also bound the range of valid indices.
+But string length is more reliably related to indexing than iteration.
 
 ### Indexing and iteration
 
@@ -637,9 +637,9 @@ Here's what each of those columns means and the associated values.
     * *UTF-16 USV*: like UTF-16, but care has been taken to ensure valid scalar values &mdash; orphaned surrogates should not be encountered
     * *Various*: a representation is chosen based on the string content, usually for space efficiency reasons.  See the notes.
     * *bytes × encoding*: in addition to the byte content, there is extra metadata which explains how to interpret the content.
-- Order: How does the language's idiomatic way to compare string values order strings?
+- Order: How does the language's idiomatic way of comparing string values order strings?
     * *L-CP*: Lexical by codepoint.  U+0FFFF < U+10000
-    * *L-U16*: Lexical by UTF-code unit.  U+0FFFF > U+10000
+    * *L-U16*: Lexical by UTF-16 code unit.  U+0FFFF > U+10000
     * *L\**: Lexical by something.  Encoding metadata might be used to pick a comparison method.
     * *Nat*: Comparison depends on a natural language locale as explained in [Unicode technical report #10](https://www.unicode.org/reports/tr10/) or [libc collation](https://www.gnu.org/software/libc/manual/html_node/Collation-Functions.html)
 - Counting: What does the idiomatic string length operator count?
@@ -706,7 +706,7 @@ Different languages use "array" to mean different things. We mean a
 *contiguous* region of memory divided into *same-size* chunks.
 
 Early programming languages represented strings as arrays of
-characters.  Before Unicode and UTF-8 that worked.  Arrays allow
+characters.  Before Unicode and UTF-8, that worked.  Arrays allow
 *random access*.  *myString\[2\]* gets the third character in constant
 time.
 
@@ -757,7 +757,7 @@ First, **avoid unnecessary copies**.  Parsing often proceeds by extracting a pre
 
 Second, **support left-to-right and right-to-left processing**.  Parsing often proceeds left-to-right, but a lot of code needs to do suffix checks: "is this a path to a `.png` file?" for example.
 
-Third, provide **efficient available character checks**.  As seen above, counting codepoints might be O(n), but often parsing algorithms don't need the count.  Parsing algorithms can often make do with *constant lookahead*: For example, to know whether the next token is C# keyword `false` or a longer identifier like `falsey`, I need one character of lookahead after the 'e'.  For a constant *k*, determining whether there are *k* characters remaining can often be done in constant time for long strings, which is where the difference with exhaustive counting really matters. In UTF-8, if the remaining array length is *k &times; 4* or greater, then there are at least *k* since each codepoint can take at most 4 array elements.
+Third, provide **efficient available character checks**.  As seen above, counting codepoints might be O(n), but often parsing algorithms don't need the count.  Parsing algorithms can often make do with *constant lookahead*: For example, to know whether the next token is C# keyword "false" or a longer identifier like "falsey", I need one character of lookahead after the 'e'.  For a constant *k*, determining whether there are *k* characters remaining can often be done in constant time for long strings, which is where the difference with exhaustive counting really matters. In UTF-8, if the remaining array length is *k &times; 4* or greater, then there are at least *k* since each codepoint can take at most 4 array elements.
 
 Fourth, **avoid entangling strings with threads**.  Using random access to walk a string left to right can be efficient if you memoize information about the last access, but multiple threads could be operating on strings in parallel.  Introducing memory barriers or concurrent data structures is a source of complexity that backend writers would be better off not having to worry about.
 
@@ -826,7 +826,7 @@ true
 </div>
 
 Now let's do the same with Temper and take a look at the translations.
-Below, the first tab shows the Temper code.  It looks like widely used
+Below, the first tab shows the Temper code.  It looks like widely-used
 programming languages.  The subsequent tabs show how the Temper translates
 into various languages we looked at above.
 
@@ -975,7 +975,7 @@ One thing to note is that *String.begin* translates to 0 in most languages, exce
 
 Swift also uses a string position type that is semantically distinct from *int*/*size\_t*/*usize*[^30]. Temper arrived at this design feature independently but after Swift.
 
-*StringIndex*es connects to the local type for string indexing: typically *int* or *size_t*.  That doesn't prevent Temper's *Int* type from also connecting to *int*.
+*StringIndex* connects to the local type for string indexing: typically *int* or *size_t* or *usize*.  That doesn't prevent Temper's *Int* type from also connecting to *int*.
 
 And here's how those translations perform. (`temper repl -b js` starts up a JavaScript interactive shell with the Temper translation pre-loaded. It's Temper's way of making it easy to explore translated libraries from other language users' perspectives)
 
@@ -1145,7 +1145,7 @@ Externalizing string positions is hard. For example, turning a *StringIndex* int
 
 We looked into slice semantics before switching to this position-oriented design.
 A slice is a region within a string typically represented as a triple of (characters, start offset, end offset). Since a slice points to its underlying string, it seems unambiguous, and it can provide strong by-construction guarantees that the offsets lie at codepoint boundaries.
-Unfortunately slice semantics are not a magic bullet:
+Unfortunately, slice semantics are not a magic bullet:
 
 - Comparison across strings is still under-defined so you don't
   magically get consistent semantics.
