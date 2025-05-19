@@ -41,7 +41,7 @@ True
 
 Holy low-level semantics, Batman! How could Python and JavaScript come up with different answers to this basic string question?!?
 
-Watch our interpid heroes investigate languages' different string representations, unmask the villain injecting chaos into string processing code, and pull a trusty solution from their overloaded yet form-fitting utility belts.
+Watch our intrepid heroes investigate languages' different string representations, unmask the villain injecting chaos into string processing code, and pull a trusty solution from their overloaded yet form-fitting utility belts.
 
 <!-- more -->
 
@@ -61,7 +61,7 @@ Second, how can we thread those needles to provide consistent semantics?
 
 ## A refresher on string encoding
 
-This is not a Unicode primer.  If you're unfamiliar with terms like *codepoints* and *string encoding*s, there're better sources of information.
+This is not a Unicode primer.  If you're unfamiliar with terms like *codepoints* and *string encoding*s, there are better sources of information.
 
 - "[The Absolute Minimum Every Software Developer Absolutely, Positively Must Know About Unicode and Character Sets \(No Excuses!\)](https://www.joelonsoftware.com/2003/10/08/the-absolute-minimum-every-software-developer-absolutely-positively-must-know-about-unicode-and-character-sets-no-excuses/)" introduces Unicode and character sets.
 - "[Fifty years of strings: Language design and the string datatype](https://ztoz.blog/posts/strings-history/)" details the co-evolution of string types and character encoding.
@@ -156,7 +156,7 @@ Programming language designers agree!! Everybody uses **lexicographic comparison
 
 Shush, COBOL.
 
-*Lexicographic ordering* simply means compare character by character.  The first pair of characters that differs determines the order.  If none differ, the shorter string is lesser.  As the Python reference noted above, lexicographic order can be generalized to any pair of sequences by comparing elements instead of characers.
+*Lexicographic ordering* simply means compare character by character.  The first pair of characters that differs determines the order.  If none differ, the shorter string is lesser.  As the Python reference noted above, lexicographic order can be generalized to any pair of sequences by comparing elements instead of characters.
 
 'A' comes before 'B' in the alphabet so "" < "A" < "AA" < "AB" < "BA" < "BAA" < "BB".
 
@@ -168,7 +168,7 @@ Why does JavaScript differ from Python3? JavaScript defines "character" as "UTF-
 
 Fun fact, language designers do not agree.
 In Lua&ge;5, the `<` operator performs *locale-sensitive*[^17a] comparison.
-Unicode and libc define *collation rules* which capture the dictionary sorting rules for natural languages.
+Unicode and libc define *collation rules* which express dictionary sorting for natural languages.
 
 [UTR-10](https://www.unicode.org/reports/tr10/#Example_Differences_Table) has this example showing that a German reader would expect 'o'-umlaut next to 'o' in a sorted list but a Swedish reader would not.
 
@@ -490,7 +490,7 @@ In Python3, there are two distinct strings:
 
 Most languages do not have that distinction.
 
-1. UTF-16 centric languages like Java, JavaScript, and C# do not because they do not track whether a surrogate was part of a pair or not.
+1. UTF-16-centric languages like Java, JavaScript, and C# do not because they do not track whether a surrogate was part of a pair or not.
 2. Rust because its strings are not codepoints for [security reasons](https://capec.mitre.org/data/definitions/80.html).  They are minimal UTF-8 encoded [Unicode scalar value]s by construction.
 
 Notably, the [WTF-8] exists to allow representing "in a way compatible with UTF-8, text from systems such as JavaScript and Windows that use UTF-16 internally but don’t enforce the well-formedness invariant that surrogates must be paired" and notes that this "is a hack intended to be used internally in self-contained systems."
@@ -757,15 +757,15 @@ First, **avoid unnecessary copies**.  Parsing often proceeds by extracting a pre
 
 Second, **support left-to-right and right-to-left processing**.  Parsing often proceeds left-to-right, but a lot of code needs to do suffix checks: "is this a path to a `.png` file?" for example.
 
-Third, provide **efficient available character checks**.  As seen above, counting codepoints might be O(n), but often parsing algorithms don't need the count.  Parsing algorithms can often make do with *constant lookahead*: For example, to know whether the next token is C# keyword `false` or a longer identifier like `falsey`, I need one character of lookahead after the 'e'.  For a constant *k*, determining whether there are *k* characters remaining can often be done in constant time for long strings, which is where the difference with exhaustive counting really matters. In UTF-8, if the remaining array length is *k &times; 4* or greater, then there're at least *k* since each codepoint can take at most 4 array elements.
+Third, provide **efficient available character checks**.  As seen above, counting codepoints might be O(n), but often parsing algorithms don't need the count.  Parsing algorithms can often make do with *constant lookahead*: For example, to know whether the next token is C# keyword `false` or a longer identifier like `falsey`, I need one character of lookahead after the 'e'.  For a constant *k*, determining whether there are *k* characters remaining can often be done in constant time for long strings, which is where the difference with exhaustive counting really matters. In UTF-8, if the remaining array length is *k &times; 4* or greater, then there are at least *k* since each codepoint can take at most 4 array elements.
 
 Fourth, **avoid entangling strings with threads**.  Using random access to walk a string left to right can be efficient if you memoize information about the last access, but multiple threads could be operating on strings in parallel.  Introducing memory barriers or concurrent data structures is a source of complexity that backend writers would be better off not having to worry about.
 
 Fifth, **string position comparison should take constant time**.  A position near the start of a given string should be *less than* a position near the end, and these checks should be usable within tight loops.  This goal is not uncontroversial&mdash;we could disallow comparison of string positions.  Many string operations do not need to compare string positions, but there are use cases.  Finding the matches of several substrings in a large string in order can be implemented using a min-priority-queue over indexes for each substring.
 
-A related but separable goal is to **decode orphaned surrogates in JSON strings**.  JSON allows representing non [Unicode scalar value] strings, and this is sometimes used to encode byte arrays: `{ "myBytes": "\uD800" }`.  That information needs to be available to complex value decoders that know that that string should actually decode to something non-string like.  JSON decoding machinery already needs a way to suspend judgement on large-number literals so that they can eventually decode to [arbitrary precision values](https://en.wikipedia.org/wiki/Arbitrary-precision_arithmetic). The same technique can be used to allow byte-decoding of non-USV strings without complicating the core string type.
+A related but separable goal is to **decode orphaned surrogates in JSON strings**.  JSON allows representing non [Unicode scalar value] strings, and this is sometimes used to encode byte arrays: `{ "myBytes": "\uD800" }`.  That information needs to be available to complex value decoders that know that that string should actually decode to something non-string-like.  JSON decoding machinery already needs a way to suspend judgment on large-number literals so that they can eventually decode to [arbitrary precision values](https://en.wikipedia.org/wiki/Arbitrary-precision_arithmetic). The same technique can be used to byte decode non-USV strings without complicating the core string type.
 
-Another related but separable goal is to **represent file paths as values**.  Windows file names can be any sequence of byte pairs[^Rust-issue-wtf8-for-paths], and Linux file names can be any byte sequence that do not contain NUL or '/', usually but not always UTF-8.  These byte sequences do not always decode cleanly to strings.  Nothing is gained by complicating the string type to represent arbitrary file paths if doing so will still not solve the corresponding problem for other file systems.  Instead file system APIs should produce opaque path values that store the volume-specific representation and provide a string decoding that fails gracefully if the internal representation doesn't follow prevailing conventions and provide a URL \%-encoded variant that is guaranteed to succeed.
+Another related but separable goal is to **represent file paths as values**.  Windows file names can be any sequence of byte pairs[^Rust-issue-wtf8-for-paths], and Linux file names can be any byte sequence that does not contain NUL or '/', usually but not always UTF-8.  These byte sequences do not always cleanly decode to strings.  Nothing is gained by complicating the string type to represent arbitrary file paths if doing so will still not solve the corresponding problem for other file systems.  Instead, file system APIs should produce opaque path values that store the volume-specific representation and provide a string decoding that fails gracefully if the internal representation doesn't follow prevailing conventions and provide a URL \%-encoded variant that is guaranteed to succeed.
 
 [^Rust-issue-wtf8-for-paths]: https://github.com/rust-lang/rust/issues/12056#issuecomment-53953016
 
@@ -775,9 +775,9 @@ A non-goal: It is **unnecessary to have identical representations** for all targ
 
 ## A translatable semantics for strings
 
-Let's look at code for a simple string operation: *isPalindrome*.  A string is a palindrome if reversing it yields the same string.
+Let's look at some code for a simple string operation: *isPalindrome*.  A string is a palindrome if reversing it yields the same string.
 
-There's a hazard here: what does "reverse" mean. [Remember](#cast-of-chars-encoded) that Greek letter Gamma, &#x393;, is represented in UTF-8 with two bytes, CE<sub>16</sub> 93<sub>16</sub>. If we reversed the UTF-8 representation byte by byte, we would conclude that the string "&#x393;" is not a palindrome even though it is when reversing UTF-16 or UTF-32 code units.
+There's a hazard here: what does "reverse" mean? [Remember](#cast-of-chars-encoded) that Greek letter Gamma, &#x393;, is represented in UTF-8 with two bytes, CE<sub>16</sub> 93<sub>16</sub>. If we reversed the UTF-8 representation byte by byte, we would conclude that the string "&#x393;" is not a palindrome even though it is when reversing UTF-16 or UTF-32 code units.
 
 Here are na&iuml;ve implementations of *isPalindrome* in Lua and JavaScript that show this hazard. Instead of actually reversing the string, each loops from both ends until it meets in the middle comparing corresponding "characters".
 
@@ -949,7 +949,7 @@ We have two positions into the string *s*: *i* initialized to *String.start* and
 
 Each iteration of the loop moves *i* forward by doing *i = *s.next(i)* and *j* back by doing *j = s.prev(j)* until they meet at the halfway point&mdash;the loop condition *i < j* becomes false.
 
-And each iteration of the loop checks whether to *return false* by seeing a codepoint before the strings halfway point is different from its counterpart after the halfway point.
+And each iteration of the loop checks whether to *return false* by seeing a codepoint before the string's halfway point is different from its counterpart after the halfway point.
 
 In Temper, *String.begin* and *s.end* have type *StringIndex* which is a distinct type from *int*.  You can't use an arbitrary integer with *s\[i\]*, only a *StringIndex*.  Then you can derive another from it via *s.next(&hellip;)* and *s.prev(&hellip;)*.
 
@@ -973,7 +973,7 @@ Code that derives *StringIndex*es in this way can be translated to languages tha
 
 One thing to note is that *String.begin* translates to 0 in most languages, except languages like Lua, which (like UCSD, which introduced Pascal strings) use 1-indexed strings.
 
-Swift also uses a string position type that is semantically distinct from *int*/*size\_t*/*usize*[^30]. Temper arrived at this design feature independently, but after Swift.
+Swift also uses a string position type that is semantically distinct from *int*/*size\_t*/*usize*[^30]. Temper arrived at this design feature independently but after Swift.
 
 *StringIndex*es connects to the local type for string indexing: typically *int* or *size_t*.  That doesn't prevent Temper's *Int* type from also connecting to *int*.
 
@@ -1161,7 +1161,7 @@ Unfortunately slice semantics are not a magic bullet:
   many times, or just the substring, which means that slice comparison
   within the same language will not be preserved.
 
-Temper's string order might not match the runtime's. This could cause mismatches between, for example, iteration order for sorted collections implemented in Temper and native implementations. There is no perfect choice for string sort order, but Temper views inconsistent semantics as the clear worse choice. All else being equal, Temper's design biases towards semantic choices that prevail in languages preferred for high-{performance,throughput} code, so our string comparison is lexical by codepoint like languages that use UTF-8 under the hood. There's some indications that this string order is emerging as a network string order[^34]. Going back to the question posed at the top of this article:
+Temper's string order might not match the runtime's. This could cause mismatches between, for example, iteration order for sorted collections implemented in Temper and native implementations. There is no perfect choice for string sort order, but Temper views inconsistent semantics as the worst choice. All else being equal, Temper's design biases towards semantic choices that prevail in languages preferred for high-{performance,throughput} code, so our string comparison is lexical by codepoint like languages that use UTF-8 under the hood. There are some indications that this string order is emerging as a network string order[^34]. Going back to the question posed at the top of this article:
 
 ```temper
 🐚$ temper repl
@@ -1173,12 +1173,12 @@ interactive#0: true
 
 ## Conclusions
 
-Careful API design combined with a flexible type connection mechanism provide a familiar experience for dealing with a core type with a storied history while translating well and avoiding gross semantic mismatches. This comes at the cost of complicating some low-level algorithms like Boyer-Moore that [require random access][boyer-moore-boost] but we're hopeful that the same connection mechanism largely obviates the need to implement those, and if needed, we can provide a solution that lets code branch on the native encoding where random access is essential.
+Careful API design combined with a flexible type connection mechanism provides a familiar experience for dealing with a core type with a storied history while translating well and avoiding gross semantic mismatches. This comes at the cost of complicating some low-level algorithms like Boyer-Moore that [require random access][boyer-moore-boost] but we're hopeful that the same connection mechanism largely obviates the need to implement those, and if needed, we can provide a solution that lets code branch on the native encoding where random access is essential.
 
-There are still wrinkles.  No translation is going to account for all quirks of the target language.  As noted above, some languages allow representing strings that others don't.  Python3 can distinguish strings with misplaced surrogates that UTF-16 based runtimes can't and which Rust and Swift disallow.  How can one test for inputs that can't be constructed in many languages but which may nevertheless come from bespoke code in some languages?
+There are still wrinkles.  No translation is going to account for all quirks of the target language.  As noted above, some languages allow representing strings that others don't.  Python3 can distinguish strings with misplaced surrogates that UTF-16-centric runtimes can't and which Rust and Swift disallow.  How can one test for inputs that can't be constructed in many languages but which may nevertheless come from bespoke code in some languages?
 The best we can guarantee is that no Temper translation produces such strings unless given such strings as inputs.
 
-Later articles in this series will touch on how string semantics intersect with other language design complicators: how a generic function to, for example, find the least value in a list, could know to use lexicographic order for a string list and numeric order for a list of numbers. Even in languages without types or with generic erasure.
+Later articles in this series will touch on how string semantics intersect with other language design complicators: how a generic function, for example, to find the least value in a list, could know to use lexicographic order for a string list and numeric order for a list of numbers. Even in languages without types or with generic erasure.
 
 If you liked this, be sure to follow the rest of our series on [stretching the strangeness budget to interoperate with many languages](./stretching.md).
 

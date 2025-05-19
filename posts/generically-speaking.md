@@ -266,9 +266,9 @@ The circled numbers show that this pseudocode glosses over some important detail
 2. We talked about taking an order as a parameter when the natural order is not desired.  What if you want the least string in a case-insensitive comparison?  Different languages support that in different ways.
 3. The `>` performs some *type-specific* comparison. It is this generic function's *type-gnostic* kernel embedded deep within a generic, *type-agnostic* framework.
 
-The next few sections will look at common features[^models-of-generics] of programming languages and how they might be used to implement this function and the pros and cons of trying to translate generic functions using those features.
+The next few sections will look at common features[^models-of-generics] of programming languages, and how they might be used to implement this function and the pros and cons of trying to translate generic functions using those features.
 
-Afterwards, this article details Temper's goals for type genericity, outlines the approach Temper uses and gives examples of how this will translate in languages that are representative of the groups discussed.
+Afterwards, this article details Temper's goals for type genericity, outlines the approach Temper uses and gives examples of how this will translate to languages that are representative of the groups discussed.
 
 [^models-of-generics]: "[Models of Generics and Metaprogramming: Go, Rust, Swift, D and More]"(https://thume.ca/2019/07/14/a-tour-of-metaprogramming-models-for-generics/)
 
@@ -429,7 +429,7 @@ Unfortunately, Temper is a language that needs to produce translations that load
 
 C# generates monomorphizations for value types and then one extra monomorphization for all reference types. This lets it use a *bool\[\]* array under the hood for its *ArrayList&lt;bool&gt;*, but for all reference types like *ArrayList&lt;MyClass&gt;* it uses a pointer array.  C# does not need to [box](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/types/boxing-and-unboxing) every primitive value stored in a generic collection.
 
-Unfortunately, C# style monomorphization won't work for Temper.  Temper needs to be able to connect multiple types to the same underlying type, for example a third-party Temper library might have a *Date* and *DateTime* type that both connect to some language's *Timestamp* type but the stringification and equality of the two still needs to preserve that distinction.  There is no exhaustive set of monomorphizations that would preserve Temper semantics given third-party, ambiguous connections.
+Unfortunately, C# style monomorphization won't work for Temper.  Temper needs to be able to connect multiple types to the same underlying type, for example, a third-party Temper library might have a *Date* and *DateTime* type that both connect to some language's *Timestamp* type but the stringification and equality of the two still needs to preserve that distinction.  There is no exhaustive set of monomorphizations that would preserve Temper semantics given third-party, ambiguous connections.
 
 There are definite use cases for monomorphization, and Temper may one day support explicit, coarse-grained, ahead-of-time monomorphization based on a mechanism like OCaml's parameterized modules. But it is the wrong tool for translating generic function definitions to other programming languages.
 
