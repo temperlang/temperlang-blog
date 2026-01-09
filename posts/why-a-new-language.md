@@ -49,7 +49,7 @@ to publish a new version.
 
 ----
 
-Let's look at some concrete examples.  Many languages allow for
+Let's look at a concrete example of a difficult language feature.  Many languages allow
 *heterogeneous collections*.  Storing values of different *types*
 alongside each other in a list or key/value map.
 
@@ -66,18 +66,17 @@ Type "help", "copyright", "credits" or "license" for more information.
 ... }
 >>> m
 {0: '0.0', nan: 'nan'}
->>> 0 == False == 0.0
+>>> 0 == False == 0.0 == -0.0
 True
 >>>
 ```
 
-Here, we created a map (dictionary in Python) with some values:
-integer zero, boolean false, floating point zero, and a special float
-value nan.
-
-But the resulting dictionary only has two entries.  Python conflated
-the first four entries; it's hashing is consistent with its
-coercing `==` operator.
+Here, we created a map (*dict* in Python) with values of different
+types: *int*, *bool*, *float*. But the resulting dictionary only has two entries.
+Python conflated the first four entries; its
+[hashing](https://docs.python.org/3/library/stdtypes.html#hashing-of-numeric-types)
+has to be consistent with its `==` operator. Both are based on Python's design for
+builtin numbers that fit on a notional rational number line.
 
 Let's try Java.
 
@@ -101,7 +100,8 @@ jshell> m.get(-0.0)
 $3 ==> "-0.0D"
 ```
 
-Java preserves all the values.  Its wrapper objects don't compare equal to each other.
+Java preserves all the values.  Its wrapper objects don't compare equal to each other;
+its builtin number types are on different number lines.
 Let's give JavaScript a spin.
 
 ```js
@@ -146,4 +146,4 @@ automatically translatable.
 So translation is hard, really really hard.  But designing a language
 for this one purpose, gives us the flexibility we need to let Temper
 developers support many language communities, including users of
-languages they have no idea about.
+languages they know nothing about.
