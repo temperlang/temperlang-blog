@@ -1,13 +1,16 @@
 ---
-date: 2025-03-21
+date: 2026-01-09
 authors:
   - mikesamuel
-draft: true
+draft: false
 ---
 
 # Why a new language?
 
-![You do not have to reinvent the wheel.  You do not have to reinvent the wheel.  You do not have to ...](./images/you-do-not-have-to-reinvent-the-wheel.svg){ width="1500" height="500" }
+<picture>
+  <source srcset="/blog/images/you-do-not-have-to-reinvent-the-wheel-dm.jpg" media="(prefers-color-scheme: dark)">
+  <img src="/blog/images/you-do-not-have-to-reinvent-the-wheel-lm.jpg" alt="[Abstract picture of a man with a large wagon wheel tiled horizontally] You do not have to reinvent the wheel.  You do not have to reinvent the wheel.  You do not have to ..." width="1536" height="512">
+</picture>
 
 Temper works by translating to other languages.  Why design a whole
 new language?  Why not just translate an existing langauge?  We
@@ -23,20 +26,28 @@ languages do the same things in subtly (frustratingly (mind bogglingly
 (just plain &hellip; deep breathes))) different ways.  (More dives into
 that in future blog posts)
 
-What we realized was, you just can't translate existing languages,
+What we realized was, you just can't translate code in existing languages,
 in a semantics preserving way.  Sure, you can sit down and *port* some
 code from Python into Java.  If you know that Python *int*s are more like
 Java *BigInteger*s then you can more closely match the original behaviour.
-And you can even have AI tools port code for you.  (Now you've got two
-codebases to maintain; go you).
+And you can even have AI tools port code for you.
 
 If you're porting a few hundred lines from one language to another, you
 probably won't run into giant differences in behaviour.  And if you
 had a good test suite and you port the tests, you can probably fix them.
+
 If you're porting tens of thousands of lines of code, then you are almost
 guaranteed to run into significant differences.  Somewhere in a codebase
 that large, there are *embedded assumptions*: the code makes some assumption
 about the source language, that just isn't true for the target language.
+
+But note here, *porting* involves writing equivalent code, then
+testing and fixing.  After you've ported, you've got a new codebase to
+maintain.  It's not like automatic translation, where you maintain one
+codebase, one single source of truth, and just retranslate when you need
+to publish a new version.
+
+----
 
 Let's look at some concrete examples.  Many languages allow for
 *heterogeneous collections*.  Storing values of different *types*
@@ -49,6 +60,7 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>> m = {
 ...   0: '0',
 ...   False: 'False',
+...   -0.0: '-0.0',
 ...   0.0: '0.0',
 ...   nan: 'nan',
 ... }
@@ -64,8 +76,10 @@ integer zero, boolean false, floating point zero, and a special float
 value nan.
 
 But the resulting dictionary only has two entries.  Python conflated
-the other three, for the purposes of key hashing to be consistent with
-its coercing `==` operator.
+the first four entries; it's hashing is consistent with its
+coercing `==` operator.
+
+Let's try Java.
 
 ```java
 |  Welcome to JShell -- Version 21.0.4
@@ -76,26 +90,32 @@ jshell> import java.util.LinkedHashMap
 jshell> var m = new LinkedHashMap<Object, String>()
 m ==> {}
 
-jshell> m.put(0, "0"); m.put(0.0D, "0.0D"); m.put(false, "false"); m.put(Double.NaN, "NaN")
+jshell> m.put(0, "0"); m.put(0.0D, "0.0D"); m.put(-0.0D, "-0.0D"); m.put(false, "false"); m.put(Double.NaN, "NaN")
 $3 ==> null
 $4 ==> null
 $5 ==> null
 $6 ==> null
+$7 ==> null
 
 jshell> m
-m ==> {0=0, 0.0=0.0D, false=false, NaN=NaN}
+m ==> {0=0, 0.0=0.0D, -0.0=-0.0D, false=false, NaN=NaN}
 
 jshell> m.get(0.0)
-$8 ==> "0.0D"
+$9 ==> "0.0D"
+
+jshell> m.get(-0.0)
+$10 ==> "-0.0D"
 ```
 
 Java preserves all the values.  Its wrapper objects don't compare equal to each other.
+Let's give JavaScript a spin.
 
 ```js
 Welcome to Node.js v25.1.0.
 Type ".help" for more information.
 > let m = {
 |   0: '0',
+|   [-0.0]: '-0.0',
 |   0.0: '0.0',
 |   false: 'false',
 |   NaN: 'NaN',
@@ -111,32 +131,25 @@ undefined
 'NaN'
 ```
 
-JavaScript seems more like Java, but still there at the end, wtw?
-JavaScript is actually just coercing all the keys to string values.
-You can use JavaScript's *Map* type with heterogeneous keys, but not
-the object style, and JavaScript *Map* doesn't extend to user
-functions since JavaScript has no standard library support for a
-custom equality idioms.
+The JavaScript `{...}` looks like Python but the results are closer
+but not the same as Java.  But at the end there: wtw?!?  JavaScript is
+actually just coercing all the keys to string values.  JavaScript
+object syntax isn't analogous to either Python *dict*s or Java *HashMap*s.
 
-The details of how languages deal with heterogeneous keys is super
-language specific.  I've only shown languages that have numbers,
-booleans, and support for NaN values, but even so there are too many
-differences to reliably translate large codebases.  Temper does not
-have heterogeneously keyed maps, but knowing that, we can provide
-other strategies to users.
+How languages deal with heterogeneous keys is super language specific.
+Language features that look equivalent actually turn out to be a
+semantic tarpit.  Temper does not have heterogeneously keyed maps, but
+since we're designing a language from scratch, we can plan for that.
 
-Temper is not just providing a toolbox for writing libraries; you
-don't just get a string type and it's up to you to deal with semantic
-corner cases.  We want Temper's users to be able to support
-communities whose languages they don't know.  That means consistent
-semantics, and consistent semantics require carefully choosing
-language features that are not only familiar, not only portable, but
-which are also translatable.
+Temper is not just providing a toolbox for writing libraries; we don't
+just provide a dict type and a string type and leave it up to users to
+deal with semantic corner cases.  We want Temper's users to be able to
+support communities whose languages they don't know.  That means
+consistent semantics, and carefully choosing language features that
+are not only familiar, not only portable, but which are also
+automatically translatable.
 
-Temper aims to *translate* reliably to other languages, not just
-*port* easily.  In *porting*, you expect to have to go back and fix
-bugs due to difference in language features, but then you need to
-separately maintain each port.  Temper enables reliable, automatic
-translation: the same semantics regardless of where a function is
-applied.  You don't maintain each translation, you just change one
-Temper source, and re-translate.
+So translation is hard, really really hard.  But designing a language
+for this one purpose, gives us the flexibility we need to let Temper
+developers support many language communities, including users of
+languages they have no idea about.
