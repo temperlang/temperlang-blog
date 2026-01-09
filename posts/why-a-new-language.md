@@ -13,7 +13,7 @@ draft: false
 </picture>
 
 Temper works by translating to other languages.  Why design a whole
-new language?  Why not just translate an existing langauge?  We
+new language?  Why not just translate an existing language?  We
 wrestled with this question an awful lot.  The tldr is that, language
 translation is hard. Really, really hard.
 
@@ -21,10 +21,10 @@ Existing languages co-evolved with their runtimes; Python makes it
 easy to express functions that the Python runtime can run. That's
 different from what the JVM, Java's runtime, can do.
 
-We did a lot of *compartive linguistics*, looking at how programming
+We did a lot of *comparative linguistics*, looking at how programming
 languages do the same things in subtly (frustratingly (mind bogglingly
-(just plain &hellip; deep breathes))) different ways.  (More dives into
-that in future blog posts)
+(just plain &hellip; deep breaths))) different ways.  (More dives into
+that in future blog posts.)
 
 What we realized was, you just can't translate code in existing languages,
 in a semantics preserving way.  Sure, you can sit down and *port* some
@@ -85,26 +85,20 @@ Let's try Java.
 |  Welcome to JShell -- Version 21.0.4
 |  For an introduction type: /help intro
 
-jshell> import java.util.LinkedHashMap
-
-jshell> var m = new LinkedHashMap<Object, String>()
-m ==> {}
-
-jshell> m.put(0, "0"); m.put(0.0D, "0.0D"); m.put(-0.0D, "-0.0D"); m.put(false, "false"); m.put(Double.NaN, "NaN")
-$3 ==> null
-$4 ==> null
-$5 ==> null
-$6 ==> null
-$7 ==> null
-
-jshell> m
-m ==> {0=0, 0.0=0.0D, -0.0=-0.0D, false=false, NaN=NaN}
+jshell> var m = Map.ofEntries(
+   ...>     Map.entry(0, "0"),
+   ...>     Map.entry(0.0D, "0.0D"),
+   ...>     Map.entry(-0.0D, "-0.0D"),
+   ...>     Map.entry(false, "false"),
+   ...>     Map.entry(Double.NaN, "NaN")
+   ...> );
+m ==> {NaN=NaN, -0.0=-0.0D, 0.0=0.0D, 0=0, false=false}
 
 jshell> m.get(0.0)
-$9 ==> "0.0D"
+$2 ==> "0.0D"
 
 jshell> m.get(-0.0)
-$10 ==> "-0.0D"
+$3 ==> "-0.0D"
 ```
 
 Java preserves all the values.  Its wrapper objects don't compare equal to each other.
